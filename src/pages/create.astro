@@ -245,14 +245,47 @@ import Layout from '../layouts/Layout.astro';
             .select('id, username')
             .eq('id', currentUser.id)
             .single();
-          
+
           console.log('Profile check result:', { existingProfile, profileCheckError });
-          
+
           if (!existingProfile && !profileCheckError) {
             // Profile doesn't exist, create it
             console.log('Creating user profile...');
             const fallbackUsername = `user_${currentUser.id.substring(0, 8)}`;
             console.log('Using fallback username:', fallbackUsername);
+
+            const { data: newProfile, error: profileCreateError } = await supabase
+              .from('profiles')
+              .insert({
+                id: currentUser.id,
+                username: currentUser.username || fallbackUsername,
+                display_name: currentUser.username || `User ${currentUser.id.substring(0, 8)}`,
+                created_at: new Date().toISOString()
+              })
+              .select()
+              .single();
+
+            console.log('Profile creation result:', { newProfile, profileCreateError });
+
+            if (profileCreateError) {
+              console.error('Error creating profile:', profileCreateError);
+              throw new Error(`Failed to create user profile: ${profileCreateError.message}`);
+            }
+
+            // Update currentUser with the new profile info
+            if (newProfile) {
+              currentUser.username = newProfile.username;
+              console.log('Updated currentUser.username to:', currentUser.username);
+            }
+          } else if (existingProfile) {
+            console.log('Profile already exists:', existingProfile);
+            // Update currentUser with existing profile info
+            currentUser.username = existingProfile.username;
+            console.log('Updated currentUser.username to:', currentUser.username);
+          } else if (profileCheckError) {
+            // Handle the case where the profile doesn't exist but we got an error
+            console.log('Profile check error, attempting to create profile...');
+            const fallbackUsername = `user_${currentUser.id.substring(0, 8)}`;
             
             const { data: newProfile, error: profileCreateError } = await supabase
               .from('profiles')
@@ -264,24 +297,19 @@ import Layout from '../layouts/Layout.astro';
               })
               .select()
               .single();
-            
+
             console.log('Profile creation result:', { newProfile, profileCreateError });
-            
+
             if (profileCreateError) {
               console.error('Error creating profile:', profileCreateError);
               throw new Error(`Failed to create user profile: ${profileCreateError.message}`);
             }
-            
+
             // Update currentUser with the new profile info
             if (newProfile) {
               currentUser.username = newProfile.username;
               console.log('Updated currentUser.username to:', currentUser.username);
             }
-          } else if (existingProfile) {
-            console.log('Profile already exists:', existingProfile);
-            // Update currentUser with existing profile info
-            currentUser.username = existingProfile.username;
-            console.log('Updated currentUser.username to:', currentUser.username);
           }
         } catch (profileError) {
           console.error('Profile check/create error:', profileError);
