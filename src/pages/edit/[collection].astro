@@ -58,11 +58,17 @@ const { collection } = Astro.params;
   
   // Load collection data
   function loadCollection() {
-    const { collection } = Astro.params;
+    // Get collection slug from URL path
+    const pathParts = window.location.pathname.split('/');
+    const collection = pathParts[pathParts.length - 1];
+    
+    console.log('Collection slug from URL:', collection);
+    
     const anonCollection = anonymousSession.getCollectionBySlug(collection);
     
     if (anonCollection) {
       currentCollection = anonCollection;
+      console.log('Found collection:', anonCollection);
       
       // Show collection details
       document.getElementById('collection-title').textContent = anonCollection.title;
@@ -72,6 +78,7 @@ const { collection } = Astro.params;
       // Load existing items
       loadItems();
     } else {
+      console.log('Collection not found for slug:', collection);
       alert('Collection not found!');
       window.location.href = '/';
     }
@@ -110,7 +117,9 @@ const { collection } = Astro.params;
   }
   
   function publishCollection() {
-    const { collection } = Astro.params;
+    // Get collection slug from URL path
+    const pathParts = window.location.pathname.split('/');
+    const collection = pathParts[pathParts.length - 1];
     window.location.href = `/demo/${collection}`;
   }
   
