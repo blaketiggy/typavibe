@@ -1,11 +1,30 @@
 ---
-import Welcome from '../components/Welcome.astro';
 import Layout from '../layouts/Layout.astro';
-
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
 ---
 
-<Layout>
-	<Welcome />
+<Layout title="TypaVibe - Create collections in 30 seconds">
+  <main>
+    <section class="hero">
+      <h1>Create a vibe in 30 seconds</h1>
+      <p>No signup needed. Just start curating.</p>
+      
+      <!-- Quick create form -->
+      <form action="/create" method="GET">
+        <input 
+          name="quick" 
+          placeholder="What's your vibe?" 
+          required 
+        />
+        <button type="submit">Create Collection</button>
+      </form>
+    </section>
+    
+    <!-- Navigation links -->
+    <section style="text-align: center; margin-top: 48px;">
+      <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
+        <a href="/explore" class="btn-secondary">Explore Collections</a>
+        <a href="/auth" class="btn-secondary">Sign In</a>
+      </div>
+    </section>
+  </main>
 </Layout>

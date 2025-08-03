@@ -1,0 +1,43 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Dashboard - TypaVibe">
+  <main>
+    <header>
+      <h1>Your Collections</h1>
+      <a href="/create" class="btn-primary">Create New Collection</a>
+    </header>
+    
+    <section class="collections-grid">
+      <article class="collection-card">
+        <h3>
+          <a href="/demo/fall-mood">
+            Fall Mood
+          </a>
+        </h3>
+        <p>Cozy autumn vibes and seasonal essentials.</p>
+        <small>
+          Created 2 days ago • 15 views
+        </small>
+      </article>
+      
+      <article class="collection-card">
+        <h3>
+          <a href="/demo/cozy-night">
+            Cozy Night In
+          </a>
+        </h3>
+        <p>Perfect items for a relaxing evening at home.</p>
+        <small>
+          Created 1 week ago • 8 views
+        </small>
+      </article>
+    </section>
+    
+    <div style="margin-top: 48px; text-align: center;">
+      <p>More features coming soon!</p>
+      <button onclick="window.location.href='/'" class="btn-secondary">Back to Home</button>
+    </div>
+  </main>
+</Layout> 

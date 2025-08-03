@@ -1,0 +1,62 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Sign In - TypaVibe">
+  <main>
+    <form id="auth-form">
+      <h1>Sign in to save your collections</h1>
+      
+      <input 
+        id="email" 
+        type="email" 
+        placeholder="Enter your email" 
+        required 
+      />
+      
+      <button type="submit">Send Magic Link</button>
+    </form>
+    
+    <div id="otp-form" style="display:none;">
+      <p>Check your email for the verification code</p>
+      <input id="otp" placeholder="Enter 6-digit code" />
+      <button id="verify-otp">Verify Code</button>
+    </div>
+  </main>
+
+  <script>
+    import { supabase } from '../lib/supabase.js';
+    
+    document.getElementById('auth-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      
+      const { error } = await supabase.auth.signInWithOtp({
+        email: email,
+        options: {
+          shouldCreateUser: true
+        }
+      });
+      
+      if (!error) {
+        document.getElementById('auth-form').style.display = 'none';
+        document.getElementById('otp-form').style.display = 'block';
+      }
+    });
+    
+    document.getElementById('verify-otp').addEventListener('click', async () => {
+      const email = document.getElementById('email').value;
+      const token = document.getElementById('otp').value;
+      
+      const { error } = await supabase.auth.verifyOtp({
+        email,
+        token,
+        type: 'email'
+      });
+      
+      if (!error) {
+        window.location.href = '/dashboard';
+      }
+    });
+  </script>
+</Layout> 

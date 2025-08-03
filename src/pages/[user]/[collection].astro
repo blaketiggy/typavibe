@@ -1,0 +1,36 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+const { user, collection } = Astro.params;
+
+// For now, just show a sample collection
+const title = `Sample Collection by Demo User`;
+---
+
+<Layout title={title} description="A sample collection for testing">
+  <main>
+    <header>
+      <h1>Sample Collection</h1>
+      <p>This is a sample collection to test the design and layout.</p>
+      <small>42 views</small>
+    </header>
+    
+    <section class="items">
+      <div class="item">
+        <h3><a href="#" target="_blank">Sample Item 1</a></h3>
+        <p>This is a sample item in the collection.</p>
+        <span class="price">$29.99</span>
+      </div>
+      <div class="item">
+        <h3><a href="#" target="_blank">Sample Item 2</a></h3>
+        <p>Another sample item for testing.</p>
+        <span class="price">$49.99</span>
+      </div>
+    </section>
+    
+    <!-- Share buttons -->
+    <button onclick="navigator.share({title: 'Sample Collection', url: window.location.href})">
+      Share Collection
+    </button>
+  </main>
+</Layout> 

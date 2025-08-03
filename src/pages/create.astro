@@ -1,0 +1,40 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+// Handle form submission
+if (Astro.request.method === 'POST') {
+  const formData = await Astro.request.formData();
+  const title = formData.get('title');
+  const description = formData.get('description');
+  
+  // For now, redirect to a sample collection
+  // Later this will create a real collection in Supabase
+  const slug = title?.toString().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || 'my-collection';
+  
+  return Astro.redirect(`/demo/${slug}`);
+}
+
+const quickTitle = Astro.url.searchParams.get('quick') || '';
+---
+
+<Layout title="Create Collection - TypaVibe">
+  <main>
+    <form method="POST">
+      <h1>Create Your Collection</h1>
+      
+      <input 
+        name="title" 
+        placeholder="Collection title" 
+        value={quickTitle}
+        required 
+      />
+      
+      <textarea 
+        name="description" 
+        placeholder="What's this collection about?"
+      ></textarea>
+      
+      <button type="submit">Create Collection</button>
+    </form>
+  </main>
+</Layout> 
