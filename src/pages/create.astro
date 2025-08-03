@@ -187,8 +187,8 @@ import Layout from '../layouts/Layout.astro';
         
         console.log('Collection created in database:', collection);
         
-        // Redirect to edit page
-        window.location.href = `/edit/${slug}`;
+        // Redirect to edit page with proper user structure
+        window.location.href = `/edit/${currentUser.id}/${slug}`;
         
       } else {
         // Save to localStorage for anonymous user
@@ -210,8 +210,8 @@ import Layout from '../layouts/Layout.astro';
         
         console.log('Collection saved to localStorage:', collection);
         
-        // Redirect to the edit page
-        window.location.href = `/edit/${slug}`;
+        // Redirect to the edit page with anonymous structure
+        window.location.href = `/edit/anonymous/${slug}`;
       }
       
     } catch (error) {

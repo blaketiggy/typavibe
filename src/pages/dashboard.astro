@@ -132,8 +132,8 @@ import Layout from '../layouts/Layout.astro';
             <span>${collection.view_count || 0} views</span>
           </div>
           <div class="collection-actions">
-            <a href="/demo/${collection.slug}" class="btn-secondary">View</a>
-            <a href="/edit/${collection.slug}" class="btn-secondary">Edit</a>
+            <a href="/${currentUser?.id || 'anonymous'}/${collection.slug}" class="btn-secondary">View</a>
+            <a href="/edit/${currentUser?.id || 'anonymous'}/${collection.slug}" class="btn-secondary">Edit</a>
             ${collection.is_anonymous ? 
               '<button onclick="convertToUserCollection(\'' + collection.slug + '\')" class="btn-primary">Save to Account</button>' : 
               ''

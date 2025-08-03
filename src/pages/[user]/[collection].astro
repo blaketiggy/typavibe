@@ -15,6 +15,15 @@ const title = `Sample Collection by Demo User`;
   type="website"
 >
   <main>
+    <!-- Breadcrumbs -->
+    <nav class="breadcrumbs" id="breadcrumbs">
+      <a href="/" class="breadcrumb-link">Home</a>
+      <span class="breadcrumb-separator">/</span>
+      <span class="breadcrumb-current" id="breadcrumb-username">Loading...</span>
+      <span class="breadcrumb-separator">/</span>
+      <span class="breadcrumb-current" id="breadcrumb-collection">Loading...</span>
+    </nav>
+    
     <header>
       <h1 id="collection-title">Loading...</h1>
       <p id="collection-description">Loading...</p>
@@ -38,60 +47,64 @@ const title = `Sample Collection by Demo User`;
 
 <script>
   import { anonymousSession } from '../../lib/anonymous.js';
+  import { supabase } from '../../lib/supabase.js';
   
   let currentCollection = null;
+  let currentUser = null;
+  let collectionOwner = null;
   
   // Load collection data
   async function loadCollection() {
-    // Get collection slug from URL path
+    // Get user and collection from URL path
     const pathParts = window.location.pathname.split('/');
-    const collection = pathParts[pathParts.length - 1];
+    const userSlug = pathParts[1]; // First part after domain
+    const collectionSlug = pathParts[2]; // Second part
     
-    console.log('Collection view - slug from URL:', collection);
+    console.log('Collection view - user:', userSlug, 'collection:', collectionSlug);
     
-    // Try to load from anonymous collections first
-    const anonCollection = anonymousSession.getCollectionBySlug(collection);
+    // Update breadcrumbs
+    updateBreadcrumbs(userSlug, collectionSlug);
+    
+    // Try to load from database first (for authenticated users)
+    if (userSlug !== 'anonymous' && userSlug !== 'demo') {
+      try {
+        const { data: collection, error } = await supabase
+          .from('collections')
+          .select(`
+            *,
+            profiles!collections_user_id_fkey(username, display_name),
+            collection_items(*)
+          `)
+          .eq('slug', collectionSlug)
+          .single();
+        
+        if (collection && !error) {
+          currentCollection = collection;
+          collectionOwner = collection.profiles;
+          console.log('Found collection in database:', collection);
+          
+          // Update page content
+          updateCollectionDisplay(collection);
+          return;
+        }
+      } catch (error) {
+        console.error('Error loading from database:', error);
+      }
+    }
+    
+    // Try to load from anonymous collections
+    const anonCollection = anonymousSession.getCollectionBySlug(collectionSlug);
     
     if (anonCollection) {
       // This is an anonymous collection
       currentCollection = anonCollection;
-      console.log('Found collection for view:', anonCollection);
+      collectionOwner = { username: 'anonymous', display_name: 'Anonymous User' };
+      console.log('Found anonymous collection:', anonCollection);
       
-      // Update page title and meta tags
-      document.title = `${anonCollection.title} - TypaVibe`;
-      updateMetaTags(anonCollection);
-      
-      document.getElementById('collection-title').textContent = anonCollection.title;
-      document.getElementById('collection-description').textContent = anonCollection.description;
-      document.getElementById('collection-views').textContent = `${anonCollection.view_count || 0} views`;
-      
-      // No edit button for published collections
-      
-      // Load items
-      const itemsContainer = document.getElementById('collection-items');
-      if (anonCollection.items && anonCollection.items.length > 0) {
-        itemsContainer.innerHTML = anonCollection.items.map(item => `
-          <div class="item">
-            <a href="${item.url}" target="_blank" class="item-link">
-              <div class="item-content">
-                <h3>${item.title}</h3>
-                ${item.description ? `<p>${item.description}</p>` : ''}
-                ${item.price ? `<span class="price">${item.price}</span>` : ''}
-              </div>
-            </a>
-          </div>
-        `).join('');
-      } else {
-        itemsContainer.innerHTML = `
-          <div style="text-align: center; padding: 48px; color: var(--color-text-secondary);">
-            <p>No items in this collection yet.</p>
-            <button onclick="addItem()" class="btn-primary">Add Your First Item</button>
-          </div>
-        `;
-      }
+      updateCollectionDisplay(anonCollection);
       
       // Increment view count
-      anonymousSession.updateCollection(collection, {
+      anonymousSession.updateCollection(collectionSlug, {
         view_count: (anonCollection.view_count || 0) + 1
       });
       
@@ -102,35 +115,64 @@ const title = `Sample Collection by Demo User`;
         description: 'This is a sample collection to test the design and layout.',
         view_count: 42
       };
+      collectionOwner = { username: 'demo', display_name: 'Demo User' };
       
-      document.getElementById('collection-title').textContent = 'Sample Collection';
-      document.getElementById('collection-description').textContent = 'This is a sample collection to test the design and layout.';
-      document.getElementById('collection-views').textContent = '42 views';
-      
-      document.getElementById('collection-items').innerHTML = `
-        <div class="item">
-          <a href="#" target="_blank" class="item-link">
-            <div class="item-content">
-              <h3>Sample Item 1</h3>
-              <p>This is a sample item in the collection.</p>
-              <span class="price">$29.99</span>
-            </div>
-          </a>
-        </div>
-        <div class="item">
-          <a href="#" target="_blank" class="item-link">
-            <div class="item-content">
-              <h3>Sample Item 2</h3>
-              <p>Another sample item for testing.</p>
-              <span class="price">$49.99</span>
-            </div>
-          </a>
-        </div>
-      `;
+      updateCollectionDisplay(currentCollection);
     }
     
     // Show share buttons
     document.getElementById('share-buttons').style.display = 'flex';
+  }
+  
+  function updateBreadcrumbs(userSlug, collectionSlug) {
+    const usernameElement = document.getElementById('breadcrumb-username');
+    const collectionElement = document.getElementById('breadcrumb-collection');
+    
+    // Set username breadcrumb
+    if (userSlug === 'anonymous') {
+      usernameElement.textContent = 'Anonymous';
+    } else if (userSlug === 'demo') {
+      usernameElement.textContent = 'Demo';
+    } else {
+      usernameElement.textContent = userSlug;
+    }
+    
+    // Set collection breadcrumb
+    collectionElement.textContent = collectionSlug.replace(/-/g, ' ');
+  }
+  
+  function updateCollectionDisplay(collection) {
+    // Update page title and meta tags
+    document.title = `${collection.title} - TypaVibe`;
+    updateMetaTags(collection);
+    
+    document.getElementById('collection-title').textContent = collection.title;
+    document.getElementById('collection-description').textContent = collection.description;
+    document.getElementById('collection-views').textContent = `${collection.view_count || 0} views`;
+    
+    // Load items
+    const itemsContainer = document.getElementById('collection-items');
+    const items = collection.collection_items || collection.items || [];
+    
+    if (items.length > 0) {
+      itemsContainer.innerHTML = items.map(item => `
+        <div class="item">
+          <a href="${item.url}" target="_blank" class="item-link">
+            <div class="item-content">
+              <h3>${item.title}</h3>
+              ${item.description ? `<p>${item.description}</p>` : ''}
+              ${item.price ? `<span class="price">${item.price}</span>` : ''}
+            </div>
+          </a>
+        </div>
+      `).join('');
+    } else {
+      itemsContainer.innerHTML = `
+        <div style="text-align: center; padding: 48px; color: var(--color-text-secondary);">
+          <p>No items in this collection yet.</p>
+        </div>
+      `;
+    }
   }
   
   function updateMetaTags(collection) {
@@ -296,5 +338,34 @@ const title = `Sample Collection by Demo User`;
     background: var(--color-accent);
     color: white;
     transform: translateY(-1px);
+  }
+  
+  /* Breadcrumbs */
+  .breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 24px;
+    font-size: 14px;
+    color: var(--color-text-secondary);
+  }
+  
+  .breadcrumb-link {
+    color: var(--color-accent);
+    text-decoration: none;
+    font-weight: 500;
+  }
+  
+  .breadcrumb-link:hover {
+    text-decoration: underline;
+  }
+  
+  .breadcrumb-separator {
+    color: var(--color-border);
+  }
+  
+  .breadcrumb-current {
+    color: var(--color-text);
+    font-weight: 500;
   }
 </style> 
