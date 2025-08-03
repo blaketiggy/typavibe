@@ -185,10 +185,41 @@ import Layout from '../layouts/Layout.astro';
       submitBtn.textContent = 'Creating...';
       submitBtn.disabled = true;
       
-      console.log('Creating collection with user:', currentUser?.email || 'anonymous');
-      
       if (currentUser) {
         // Save to database for authenticated user
+        console.log('Creating collection with user:', currentUser.email);
+        
+        // First, ensure the user profile exists
+        try {
+          const { data: existingProfile, error: profileCheckError } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', currentUser.id)
+            .single();
+          
+          if (!existingProfile && !profileCheckError) {
+            // Profile doesn't exist, create it
+            console.log('Creating user profile...');
+            const { error: profileCreateError } = await supabase
+              .from('profiles')
+              .insert({
+                id: currentUser.id,
+                username: currentUser.username || `user_${currentUser.id.substring(0, 8)}`,
+                display_name: currentUser.username || `User ${currentUser.id.substring(0, 8)}`,
+                created_at: new Date().toISOString()
+              });
+            
+            if (profileCreateError) {
+              console.error('Error creating profile:', profileCreateError);
+              throw new Error('Failed to create user profile');
+            }
+          }
+        } catch (profileError) {
+          console.error('Profile check/create error:', profileError);
+          // Continue anyway, the collection insert will fail if needed
+        }
+        
+        // Now create the collection
         const { data: collection, error } = await supabase
           .from('collections')
           .insert({
