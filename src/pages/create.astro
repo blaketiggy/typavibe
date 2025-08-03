@@ -8,25 +8,9 @@ const quickTitle = Astro.url.searchParams.get('quick') || '';
   <main>
     <div class="create-flow">
       <h1>Create Your Collection</h1>
-      <p class="subtitle">Start by adding your first link</p>
+      <p class="subtitle">Start by naming your collection</p>
       
-      <div class="add-link-section">
-        <form id="add-link-form">
-          <input 
-            id="link-url" 
-            name="url" 
-            placeholder="Paste a product URL here..." 
-            type="url"
-            required 
-          />
-          <button type="submit" class="btn-primary">
-            ➕ Add Link
-          </button>
-        </form>
-      </div>
-      
-      <div class="collection-details" id="collection-details" style="display: none;">
-        <h2>Collection Details</h2>
+      <form id="create-form">
         <input 
           id="title" 
           name="title" 
@@ -72,48 +56,21 @@ const quickTitle = Astro.url.searchParams.get('quick') || '';
           </div>
         </div>
         
-        <button type="button" id="create-collection-btn" class="btn-primary">
-          🚀 Create Collection
+        <button type="submit" class="btn-primary">
+          Create Collection
         </button>
-      </div>
+      </form>
     </div>
   </main>
 
   <script>
     import { anonymousSession } from '../lib/anonymous.js';
     
-    let firstItem = null;
-    
-    // Handle "Add Link" form submission
-    document.getElementById('add-link-form').addEventListener('submit', async (e) => {
+    document.getElementById('create-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       
-      const url = document.getElementById('link-url').value;
-      
-      // For now, create a simple item (we'll enhance this later)
-      firstItem = {
-        url: url,
-        title: 'Product from link',
-        description: 'Product from link'
-      };
-      
-      // Show collection details form
-      document.getElementById('collection-details').style.display = 'block';
-      document.getElementById('add-link-form').style.display = 'none';
-      
-      // Focus on title input
-      document.getElementById('title').focus();
-    });
-    
-    // Handle "Create Collection" button
-    document.getElementById('create-collection-btn').addEventListener('click', async () => {
       const title = document.getElementById('title').value;
       const description = document.getElementById('description').value;
-      
-      if (!title.trim()) {
-        alert('Please enter a collection title');
-        return;
-      }
       
       // Get selected tags
       const selectedTags = [];
@@ -126,7 +83,7 @@ const quickTitle = Astro.url.searchParams.get('quick') || '';
         .replace(/\s+/g, '-')
         .replace(/[^a-z0-9-]/g, '');
       
-      // Create anonymous collection with the first item
+      // Create anonymous collection
       const collection = {
         id: 'anon_' + Date.now(),
         title: title,
@@ -135,7 +92,7 @@ const quickTitle = Astro.url.searchParams.get('quick') || '';
         tags: selectedTags,
         is_anonymous: true,
         anon_session_id: anonymousSession.getSessionId(),
-        items: firstItem ? [firstItem] : [],
+        items: [],
         view_count: 0,
         created_at: new Date().toISOString()
       };
@@ -143,7 +100,7 @@ const quickTitle = Astro.url.searchParams.get('quick') || '';
       // Save to localStorage
       anonymousSession.saveAnonymousCollection(collection);
       
-      // Redirect to the edit page to add more items
+      // Redirect to the edit page
       window.location.href = `/edit/${slug}`;
     });
   </script>
@@ -159,39 +116,6 @@ const quickTitle = Astro.url.searchParams.get('quick') || '';
     text-align: center;
     color: var(--color-text-secondary);
     margin-bottom: 32px;
-  }
-  
-  .add-link-section {
-    background: var(--color-background-secondary);
-    border: 1.5px solid var(--color-border);
-    border-radius: var(--radius);
-    padding: 32px;
-    margin-bottom: 24px;
-  }
-  
-  .add-link-section form {
-    display: flex;
-    gap: 12px;
-    align-items: flex-end;
-  }
-  
-  .add-link-section input {
-    flex: 1;
-  }
-  
-  .add-link-section button {
-    min-width: 120px;
-  }
-  
-  .collection-details {
-    background: var(--color-background-secondary);
-    border: 1.5px solid var(--color-border);
-    border-radius: var(--radius);
-    padding: 32px;
-  }
-  
-  .collection-details h2 {
-    margin-bottom: 20px;
   }
   
   .tag-selection {

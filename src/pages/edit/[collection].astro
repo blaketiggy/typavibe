@@ -16,38 +16,69 @@ const { collection } = Astro.params;
       <p id="collection-description" style="color: var(--color-text-secondary);">Loading...</p>
     </div>
     
-    <!-- Simple add item section -->
+    <!-- Step-by-step add item section -->
     <section class="add-item-section">
       <h2>Add Items</h2>
-      <form id="add-item-form">
-        <div class="form-row">
+      
+      <!-- Add Item Button -->
+      <button id="add-item-btn" class="btn-primary">
+        ➕ Add Item
+      </button>
+      
+      <!-- Step-by-step form (hidden initially) -->
+      <div id="add-item-form" class="step-form" style="display: none;">
+        <div class="step" id="step-url">
+          <label>Product URL</label>
           <input 
             id="item-url" 
-            placeholder="Product URL" 
+            placeholder="Paste product URL here..." 
             type="url" 
             required 
           />
+          <div class="step-buttons">
+            <button type="button" class="btn-secondary" onclick="cancelAddItem()">Cancel</button>
+            <button type="button" class="btn-primary" onclick="nextStep('title')">Next</button>
+          </div>
+        </div>
+        
+        <div class="step" id="step-title" style="display: none;">
+          <label>Item Title (optional)</label>
           <input 
             id="item-title" 
-            placeholder="Item title" 
-            required 
+            placeholder="Leave blank to use website title" 
           />
+          <div class="step-buttons">
+            <button type="button" class="btn-secondary" onclick="prevStep('url')">Back</button>
+            <button type="button" class="btn-primary" onclick="nextStep('notes')">Next</button>
+          </div>
         </div>
-        <div class="form-row">
+        
+        <div class="step" id="step-notes" style="display: none;">
+          <label>Notes (optional)</label>
           <textarea 
-            id="item-description" 
-            placeholder="Description (optional)" 
-            rows="2"
+            id="item-notes" 
+            placeholder="Add any notes about this item..."
+            rows="3"
           ></textarea>
+          <div class="step-buttons">
+            <button type="button" class="btn-secondary" onclick="prevStep('title')">Back</button>
+            <button type="button" class="btn-primary" onclick="nextStep('price')">Next</button>
+          </div>
+        </div>
+        
+        <div class="step" id="step-price" style="display: none;">
+          <label>Price (optional)</label>
           <input 
             id="item-price" 
-            placeholder="Price (optional)" 
+            placeholder="e.g., $29.99" 
             type="text"
-            pattern="^\$?\d+(\.\d{2})?$"
           />
+          <div class="step-buttons">
+            <button type="button" class="btn-secondary" onclick="prevStep('notes')">Back</button>
+            <button type="button" class="btn-primary" onclick="addItem()">Add Item</button>
+          </div>
         </div>
-        <button type="submit">Add Item</button>
-      </form>
+      </div>
     </section>
     
     <!-- Items list appears here -->
@@ -70,6 +101,7 @@ const { collection } = Astro.params;
   import { anonymousSession } from '../../lib/anonymous.js';
   
   let currentCollection = null;
+  let currentStep = 'url';
   
   // Load collection data
   function loadCollection() {
@@ -145,31 +177,51 @@ const { collection } = Astro.params;
     window.location.href = `/demo/${collection}`;
   }
   
-  // Make publishCollection globally accessible
-  window.publishCollection = publishCollection;
+  // Add item flow functions
+  function showAddItemForm() {
+    document.getElementById('add-item-btn').style.display = 'none';
+    document.getElementById('add-item-form').style.display = 'block';
+    document.getElementById('item-url').focus();
+  }
   
-  // Handle add item form
-  document.getElementById('add-item-form').addEventListener('submit', (e) => {
-    e.preventDefault();
-    console.log('Form submitted!');
-    
-    // Check if collection is loaded
-    if (!currentCollection) {
-      console.error('Current collection is null!');
-      alert('Collection not loaded. Please refresh the page.');
-      return;
+  function cancelAddItem() {
+    document.getElementById('add-item-btn').style.display = 'inline-flex';
+    document.getElementById('add-item-form').style.display = 'none';
+    document.getElementById('add-item-form').reset();
+    currentStep = 'url';
+    showStep('url');
+  }
+  
+  function nextStep(step) {
+    if (currentStep === 'url') {
+      const url = document.getElementById('item-url').value;
+      if (!url.trim()) {
+        alert('Please enter a URL');
+        return;
+      }
     }
     
+    currentStep = step;
+    showStep(step);
+  }
+  
+  function prevStep(step) {
+    currentStep = step;
+    showStep(step);
+  }
+  
+  function showStep(step) {
+    // Hide all steps
+    document.querySelectorAll('.step').forEach(s => s.style.display = 'none');
+    // Show current step
+    document.getElementById(`step-${step}`).style.display = 'block';
+  }
+  
+  function addItem() {
     const url = document.getElementById('item-url').value;
-    const title = document.getElementById('item-title').value;
-    const description = document.getElementById('item-description').value;
+    const title = document.getElementById('item-title').value || 'Product from link';
+    const description = document.getElementById('item-notes').value;
     const price = document.getElementById('item-price').value;
-    
-    console.log('URL:', url);
-    console.log('Title:', title);
-    console.log('Description:', description);
-    console.log('Price:', price);
-    console.log('Current collection before adding:', currentCollection);
     
     const newItem = {
       url: url,
@@ -178,30 +230,23 @@ const { collection } = Astro.params;
       price: price
     };
     
-    console.log('New item:', newItem);
-    
     if (!currentCollection.items) {
       currentCollection.items = [];
     }
     
     currentCollection.items.push(newItem);
-    console.log('Updated collection items:', currentCollection.items);
     
     anonymousSession.updateCollection(currentCollection.slug, {
       items: currentCollection.items
     });
     
-    // Clear form
-    document.getElementById('add-item-form').reset();
-    
-    // Reload items immediately
+    // Reset form and hide
+    cancelAddItem();
     loadItems();
-    
-    // Focus back on URL input for quick adding
-    document.getElementById('item-url').focus();
-  });
+  }
   
-  // Handle publish button click
+  // Event listeners
+  document.getElementById('add-item-btn').addEventListener('click', showAddItemForm);
   document.getElementById('publish-btn').addEventListener('click', publishCollection);
   
   // Load collection when page loads
@@ -221,32 +266,33 @@ const { collection } = Astro.params;
     margin-bottom: 16px;
   }
   
-  .add-item-section form {
-    display: flex;
-    gap: 12px;
-    align-items: flex-end;
+  .step-form {
+    margin-top: 16px;
   }
   
-  .add-item-section input {
-    flex: 1;
+  .step {
+    margin-bottom: 16px;
   }
   
-  .add-item-section button {
-    min-width: 100px;
+  .step label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--color-text);
   }
-
-  .form-row {
-    display: flex;
-    gap: 12px;
+  
+  .step input,
+  .step textarea {
+    width: 100%;
     margin-bottom: 12px;
   }
-
-  .form-row textarea {
-    flex: 1;
-    resize: vertical;
-    min-height: 50px;
+  
+  .step-buttons {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
   }
-
+  
   .item-display {
     display: flex;
     justify-content: space-between;
