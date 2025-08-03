@@ -78,9 +78,13 @@ const { collection } = Astro.params;
   }
   
   function loadItems() {
+    console.log('loadItems called');
     const itemsContainer = document.getElementById('items-list');
+    console.log('Items container:', itemsContainer);
+    console.log('Current collection:', currentCollection);
     
     if (currentCollection.items && currentCollection.items.length > 0) {
+      console.log('Items found:', currentCollection.items);
       itemsContainer.innerHTML = currentCollection.items.map((item, index) => `
         <div class="item-display">
           <h3><a href="${item.url}" target="_blank">${item.title}</a></h3>
@@ -90,6 +94,7 @@ const { collection } = Astro.params;
         </div>
       `).join('');
     } else {
+      console.log('No items found');
       itemsContainer.innerHTML = '<p style="text-align: center; color: var(--color-text-secondary);">No items yet. Add your first item above!</p>';
     }
   }
@@ -112,9 +117,13 @@ const { collection } = Astro.params;
   // Handle add item form
   document.getElementById('add-item-form').addEventListener('submit', (e) => {
     e.preventDefault();
+    console.log('Form submitted!');
     
     const url = document.getElementById('item-url').value;
     const title = document.getElementById('item-title').value;
+    
+    console.log('URL:', url);
+    console.log('Title:', title);
     
     const newItem = {
       url: url,
@@ -122,11 +131,15 @@ const { collection } = Astro.params;
       description: title // Use title as description for simplicity
     };
     
+    console.log('New item:', newItem);
+    
     if (!currentCollection.items) {
       currentCollection.items = [];
     }
     
     currentCollection.items.push(newItem);
+    console.log('Updated collection items:', currentCollection.items);
+    
     anonymousSession.updateCollection(currentCollection.slug, {
       items: currentCollection.items
     });
