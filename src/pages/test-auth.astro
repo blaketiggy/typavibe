@@ -19,6 +19,7 @@ import Layout from '../layouts/Layout.astro';
       
       <div class="test-section">
         <h2>Authentication Test</h2>
+        <input id="test-email" type="email" placeholder="Enter your email" value="test@example.com" style="margin-bottom: 12px; width: 100%;" />
         <button onclick="testAuth()" class="btn-primary">Test Magic Link</button>
         <div id="auth-status"></div>
       </div>
@@ -27,6 +28,12 @@ import Layout from '../layouts/Layout.astro';
         <h2>Database Test</h2>
         <button onclick="testDatabase()" class="btn-secondary">Test Database</button>
         <div id="database-status"></div>
+      </div>
+      
+      <div class="test-section">
+        <h2>Debug Info</h2>
+        <button onclick="showDebugInfo()" class="btn-secondary">Show Debug Info</button>
+        <div id="debug-info"></div>
       </div>
     </div>
   </main>
@@ -96,20 +103,26 @@ import Layout from '../layouts/Layout.astro';
     }
   }
   
-  // Test authentication
+  // Test authentication with detailed logging
   async function testAuth() {
     const statusDiv = document.getElementById('auth-status');
-    const testEmail = 'test@example.com';
+    const testEmail = document.getElementById('test-email').value;
     
     try {
-      statusDiv.innerHTML = '<div style="color: #f59e0b;">🔄 Testing...</div>';
+      statusDiv.innerHTML = '<div style="color: #f59e0b;">🔄 Testing authentication...</div>';
       
-      const { error } = await supabase.auth.signInWithOtp({
+      console.log('Testing auth with email:', testEmail);
+      console.log('Current origin:', window.location.origin);
+      
+      const { data, error } = await supabase.auth.signInWithOtp({
         email: testEmail,
         options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`
+          emailRedirectTo: `${window.location.origin}/dashboard`,
+          shouldCreateUser: true
         }
       });
+      
+      console.log('Auth response:', { data, error });
       
       if (error) {
         throw error;
@@ -119,7 +132,8 @@ import Layout from '../layouts/Layout.astro';
         <div style="color: #10b981; margin-bottom: 8px;">✅ Authentication test successful</div>
         <div style="font-size: 12px; color: var(--color-text-secondary);">
           Magic link sent to ${testEmail}<br>
-          Check your Supabase dashboard for the email
+          Check your Supabase dashboard for the email<br>
+          Response: ${JSON.stringify(data)}
         </div>
       `;
       
@@ -128,7 +142,9 @@ import Layout from '../layouts/Layout.astro';
       statusDiv.innerHTML = `
         <div style="color: #dc2626; margin-bottom: 8px;">❌ Authentication test failed</div>
         <div style="font-size: 12px; color: var(--color-text-secondary);">
-          Error: ${error.message}
+          Error: ${error.message}<br>
+          Code: ${error.status}<br>
+          Details: ${JSON.stringify(error)}
         </div>
       `;
     }
@@ -184,9 +200,29 @@ import Layout from '../layouts/Layout.astro';
     }
   }
   
+  // Show debug information
+  function showDebugInfo() {
+    const debugDiv = document.getElementById('debug-info');
+    
+    const debugInfo = {
+      url: import.meta.env.PUBLIC_SUPABASE_URL,
+      key: import.meta.env.PUBLIC_SUPABASE_ANON_KEY ? 'Present' : 'Missing',
+      origin: window.location.origin,
+      userAgent: navigator.userAgent,
+      timestamp: new Date().toISOString()
+    };
+    
+    debugDiv.innerHTML = `
+      <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; font-family: monospace; font-size: 12px; text-align: left;">
+        <pre>${JSON.stringify(debugInfo, null, 2)}</pre>
+      </div>
+    `;
+  }
+  
   // Make functions globally accessible
   window.testAuth = testAuth;
   window.testDatabase = testDatabase;
+  window.showDebugInfo = showDebugInfo;
   
   // Run initial tests
   checkEnvironment();
