@@ -1,0 +1,255 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Anonymous Collections - TypaVibe">
+  <main>
+    <div class="collections-container">
+      <div class="header">
+        <h1>Anonymous Collections</h1>
+        <p class="subtitle">Recently created collections by anonymous users</p>
+      </div>
+      
+      <div id="collections-grid" class="collections-grid">
+        <div class="loading">Loading collections...</div>
+      </div>
+    </div>
+  </main>
+</Layout>
+
+<script>
+  import { anonymousSession } from '../lib/anonymous.js';
+  
+  // Make anonymousSession globally accessible
+  window.anonymousSession = anonymousSession;
+  
+  function loadAnonymousCollections() {
+    const grid = document.getElementById('collections-grid');
+    
+    try {
+      // Get all anonymous collections from localStorage
+      const collections = anonymousSession.getAnonymousCollections();
+      
+      // Sort by creation date (newest first) and limit to 100
+      const sortedCollections = collections
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        .slice(0, 100);
+      
+      if (sortedCollections.length === 0) {
+        grid.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">📝</div>
+            <h3>No Collections Yet</h3>
+            <p>Be the first to create an anonymous collection!</p>
+            <a href="/create" class="btn-primary">Create Collection</a>
+          </div>
+        `;
+        return;
+      }
+      
+      grid.innerHTML = sortedCollections.map(collection => `
+        <div class="collection-card">
+          <div class="card-content">
+            <h3 class="collection-title">${collection.title}</h3>
+            ${collection.description ? `<p class="collection-description">${collection.description}</p>` : ''}
+            <div class="collection-meta">
+              <span class="collection-date">${new Date(collection.created_at).toLocaleDateString()}</span>
+              ${collection.tags && collection.tags.length > 0 ? 
+                `<div class="collection-tags">
+                  ${collection.tags.slice(0, 3).map(tag => `<span class="tag">${tag}</span>`).join('')}
+                  ${collection.tags.length > 3 ? `<span class="tag-more">+${collection.tags.length - 3}</span>` : ''}
+                </div>` : ''
+              }
+            </div>
+          </div>
+          <div class="card-actions">
+            <a href="/anonymous/${collection.slug}" class="btn-secondary">View</a>
+            <a href="/edit/anonymous/${collection.slug}" class="btn-secondary">Edit</a>
+          </div>
+        </div>
+      `).join('');
+      
+    } catch (error) {
+      console.error('Error loading anonymous collections:', error);
+      grid.innerHTML = `
+        <div class="error-state">
+          <div class="error-icon">⚠️</div>
+          <h3>Error Loading Collections</h3>
+          <p>There was an error loading the collections. Please try again.</p>
+        </div>
+      `;
+    }
+  }
+  
+  // Load collections when page loads
+  loadAnonymousCollections();
+</script>
+
+<style>
+  .collections-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+  
+  .header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  
+  .header h1 {
+    margin-bottom: 12px;
+    font-size: 32px;
+    font-weight: 700;
+  }
+  
+  .subtitle {
+    color: var(--color-text-secondary);
+    font-size: 16px;
+  }
+  
+  .collections-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 24px;
+  }
+  
+  .collection-card {
+    background: var(--color-background-secondary);
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 24px;
+    transition: all 0.2s ease;
+  }
+  
+  .collection-card:hover {
+    border-color: var(--color-accent);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  }
+  
+  .card-content {
+    margin-bottom: 20px;
+  }
+  
+  .collection-title {
+    margin: 0 0 8px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-text);
+  }
+  
+  .collection-description {
+    margin: 0 0 16px 0;
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+    font-size: 14px;
+  }
+  
+  .collection-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  
+  .collection-date {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+  }
+  
+  .collection-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  
+  .tag {
+    background: var(--color-primary);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+  
+  .tag-more {
+    background: var(--color-background);
+    color: var(--color-text-secondary);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+  
+  .card-actions {
+    display: flex;
+    gap: 8px;
+  }
+  
+  .btn-secondary {
+    background: transparent;
+    color: var(--color-text);
+    border: 1.5px solid var(--color-border);
+    padding: 8px 16px;
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+  
+  .btn-secondary:hover {
+    background: var(--color-background);
+    border-color: var(--color-text);
+  }
+  
+  .loading, .empty-state, .error-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 48px 24px;
+  }
+  
+  .empty-icon, .error-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+  }
+  
+  .empty-state h3, .error-state h3 {
+    margin: 0 0 8px 0;
+    font-size: 20px;
+    font-weight: 600;
+  }
+  
+  .empty-state p, .error-state p {
+    margin: 0 0 24px 0;
+    color: var(--color-text-secondary);
+  }
+  
+  .btn-primary {
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: var(--radius);
+    font-weight: 500;
+    text-decoration: none;
+    transition: background-color 0.2s;
+  }
+  
+  .btn-primary:hover {
+    background: var(--color-primary-hover);
+  }
+  
+  @media (max-width: 768px) {
+    .collections-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .collection-meta {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+</style> 

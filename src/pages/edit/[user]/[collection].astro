@@ -10,7 +10,7 @@ const { user, collection } = Astro.params;
     <nav class="breadcrumbs">
       <a href="/" class="breadcrumb-link">Home</a>
       <span class="breadcrumb-separator">/</span>
-      <span class="breadcrumb-current" id="breadcrumb-username">Loading...</span>
+      <a href="/${userSlug}" class="breadcrumb-link" id="breadcrumb-username">Loading...</a>
       <span class="breadcrumb-separator">/</span>
       <span class="breadcrumb-current" id="breadcrumb-collection">Loading...</span>
       <span class="breadcrumb-separator">/</span>
