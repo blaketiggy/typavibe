@@ -64,6 +64,22 @@ import Layout from '../layouts/Layout.astro';
     currentUser = user;
     document.getElementById('user-email').textContent = user.email;
     
+    // Get user profile to get username
+    try {
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', user.id)
+        .single();
+      
+      if (profile && !profileError) {
+        currentUser.username = profile.username;
+        console.log('User username:', profile.username);
+      }
+    } catch (profileError) {
+      console.error('Error getting user profile:', profileError);
+    }
+    
     // Load user's collections
     await loadUserCollections();
     
@@ -132,8 +148,8 @@ import Layout from '../layouts/Layout.astro';
             <span>${collection.view_count || 0} views</span>
           </div>
           <div class="collection-actions">
-            <a href="/${currentUser?.id || 'anonymous'}/${collection.slug}" class="btn-secondary">View</a>
-            <a href="/edit/${currentUser?.id || 'anonymous'}/${collection.slug}" class="btn-secondary">Edit</a>
+            <a href="/${currentUser?.username || 'anonymous'}/${collection.slug}" class="btn-secondary">View</a>
+            <a href="/edit/${currentUser?.username || 'anonymous'}/${collection.slug}" class="btn-secondary">Edit</a>
             ${collection.is_anonymous ? 
               '<button onclick="convertToUserCollection(\'' + collection.slug + '\')" class="btn-primary">Save to Account</button>' : 
               ''

@@ -88,6 +88,24 @@ import Layout from '../layouts/Layout.astro';
       
       if (user) {
         console.log('User authenticated:', user.email);
+        console.log('User object:', user);
+        
+        // Get user profile to get username
+        try {
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('username')
+            .eq('id', user.id)
+            .single();
+          
+          if (profile && !profileError) {
+            currentUser.username = profile.username;
+            console.log('User username:', profile.username);
+          }
+        } catch (profileError) {
+          console.error('Error getting user profile:', profileError);
+        }
+        
         showAuthStatus(`✅ Signed in as ${user.email}`, 'success');
       } else {
         console.log('No user authenticated');
@@ -188,7 +206,7 @@ import Layout from '../layouts/Layout.astro';
         console.log('Collection created in database:', collection);
         
         // Redirect to edit page with proper user structure
-        window.location.href = `/edit/${currentUser.id}/${slug}`;
+        window.location.href = `/edit/${currentUser.username}/${slug}`;
         
       } else {
         // Save to localStorage for anonymous user
