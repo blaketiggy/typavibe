@@ -2,22 +2,328 @@
 import Layout from '../layouts/Layout.astro';
 ---
 
-<Layout title="Explore Collections - TypaVibe">
+<Layout 
+  title="Explore Collections - TypaVibe"
+  description="Discover and explore curated product collections from the community"
+  image="/og-image.png"
+  url={Astro.url.href}
+  type="website"
+>
   <main>
-    <h1>Explore Collections</h1>
+    <header>
+      <h1>Explore Collections</h1>
+      <p>Discover amazing curated collections from the community</p>
+    </header>
     
-    <section class="collections-grid">
+    <!-- Search and filter section -->
+    <section class="search-section">
+      <div class="search-container">
+        <input 
+          id="search-input" 
+          type="text" 
+          placeholder="Search collections..." 
+          class="search-input"
+        />
+        <div class="filter-tags" id="filter-tags">
+          <span class="filter-label">Filter by:</span>
+          <button class="tag-btn active" data-tag="all">All</button>
+          <button class="tag-btn" data-tag="fashion">Fashion</button>
+          <button class="tag-btn" data-tag="tech">Tech</button>
+          <button class="tag-btn" data-tag="home">Home</button>
+          <button class="tag-btn" data-tag="beauty">Beauty</button>
+          <button class="tag-btn" data-tag="fitness">Fitness</button>
+          <button class="tag-btn" data-tag="food">Food</button>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Collections grid -->
+    <section class="collections-grid" id="collections-grid">
+      <div class="loading">Loading collections...</div>
+    </section>
+    
+    <!-- No results message -->
+    <div id="no-results" style="display: none; text-align: center; padding: 48px;">
+      <p style="color: var(--color-text-secondary); margin-bottom: 16px;">
+        No collections found matching your search.
+      </p>
+      <button onclick="clearFilters()" class="btn-secondary">Clear Filters</button>
+    </div>
+  </main>
+</Layout>
+
+<script>
+  import { anonymousSession } from '../lib/anonymous.js';
+  
+  let allCollections = [];
+  let filteredCollections = [];
+  let currentSearch = '';
+  let currentTag = 'all';
+  
+  // Sample collections data (in production, this would come from Supabase)
+  const sampleCollections = [
+    {
+      id: '1',
+      title: 'Cozy Fall Essentials',
+      description: 'Perfect items for autumn vibes and seasonal comfort.',
+      tags: ['fashion', 'home'],
+      view_count: 156,
+      created_at: '2024-01-15T10:30:00Z',
+      username: 'style_curator'
+    },
+    {
+      id: '2',
+      title: 'Tech Gadgets 2024',
+      description: 'Must-have technology and gadgets for the new year.',
+      tags: ['tech'],
+      view_count: 89,
+      created_at: '2024-01-14T15:45:00Z',
+      username: 'tech_lover'
+    },
+    {
+      id: '3',
+      title: 'Skincare Routine',
+      description: 'Complete skincare collection for glowing skin.',
+      tags: ['beauty'],
+      view_count: 234,
+      created_at: '2024-01-13T09:20:00Z',
+      username: 'beauty_expert'
+    },
+    {
+      id: '4',
+      title: 'Home Office Setup',
+      description: 'Essential items for a productive home workspace.',
+      tags: ['home', 'tech'],
+      view_count: 67,
+      created_at: '2024-01-12T14:15:00Z',
+      username: 'remote_worker'
+    },
+    {
+      id: '5',
+      title: 'Fitness Motivation',
+      description: 'Gear and accessories to boost your workout routine.',
+      tags: ['fitness'],
+      view_count: 123,
+      created_at: '2024-01-11T11:00:00Z',
+      username: 'fitness_guru'
+    },
+    {
+      id: '6',
+      title: 'Healthy Meal Prep',
+      description: 'Kitchen essentials for nutritious meal preparation.',
+      tags: ['food', 'home'],
+      view_count: 78,
+      created_at: '2024-01-10T16:30:00Z',
+      username: 'healthy_eater'
+    }
+  ];
+  
+  // Load collections
+  function loadCollections() {
+    // Combine sample collections with anonymous collections
+    const anonymousCollections = anonymousSession.getAnonymousCollections();
+    const anonFormatted = anonymousCollections.map(collection => ({
+      id: collection.id,
+      title: collection.title,
+      description: collection.description,
+      tags: collection.tags || [],
+      view_count: collection.view_count || 0,
+      created_at: collection.created_at,
+      username: 'Anonymous',
+      is_anonymous: true,
+      slug: collection.slug
+    }));
+    
+    allCollections = [...sampleCollections, ...anonFormatted];
+    filteredCollections = [...allCollections];
+    
+    renderCollections();
+  }
+  
+  // Render collections
+  function renderCollections() {
+    const grid = document.getElementById('collections-grid');
+    const noResults = document.getElementById('no-results');
+    
+    if (filteredCollections.length === 0) {
+      grid.style.display = 'none';
+      noResults.style.display = 'block';
+      return;
+    }
+    
+    grid.style.display = 'grid';
+    noResults.style.display = 'none';
+    
+    grid.innerHTML = filteredCollections.map(collection => `
       <article class="collection-card">
         <h3>
-          <a href="/demo/sample-collection">
-            Sample Collection
+          <a href="${collection.is_anonymous ? `/demo/${collection.slug}` : `/demo/${collection.slug}`}">
+            ${collection.title}
           </a>
         </h3>
-        <p>This is a sample collection to test the design.</p>
+        <p>${collection.description}</p>
+        <div class="collection-tags">
+          ${collection.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+        </div>
         <small>
-          by Demo User • 42 views
+          by ${collection.username} • ${collection.view_count} views
         </small>
       </article>
-    </section>
-  </main>
-</Layout> 
+    `).join('');
+  }
+  
+  // Filter collections
+  function filterCollections() {
+    filteredCollections = allCollections.filter(collection => {
+      const matchesSearch = currentSearch === '' || 
+        collection.title.toLowerCase().includes(currentSearch.toLowerCase()) ||
+        collection.description.toLowerCase().includes(currentSearch.toLowerCase()) ||
+        collection.tags.some(tag => tag.toLowerCase().includes(currentSearch.toLowerCase()));
+      
+      const matchesTag = currentTag === 'all' || 
+        collection.tags.includes(currentTag);
+      
+      return matchesSearch && matchesTag;
+    });
+    
+    renderCollections();
+  }
+  
+  // Search functionality
+  function setupSearch() {
+    const searchInput = document.getElementById('search-input');
+    let searchTimeout;
+    
+    searchInput.addEventListener('input', (e) => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        currentSearch = e.target.value;
+        filterCollections();
+      }, 300);
+    });
+  }
+  
+  // Tag filtering
+  function setupTagFilter() {
+    const tagButtons = document.querySelectorAll('.tag-btn');
+    
+    tagButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        // Remove active class from all buttons
+        tagButtons.forEach(b => b.classList.remove('active'));
+        // Add active class to clicked button
+        btn.classList.add('active');
+        
+        currentTag = btn.dataset.tag;
+        filterCollections();
+      });
+    });
+  }
+  
+  function clearFilters() {
+    document.getElementById('search-input').value = '';
+    currentSearch = '';
+    currentTag = 'all';
+    
+    // Reset tag buttons
+    document.querySelectorAll('.tag-btn').forEach(btn => {
+      btn.classList.remove('active');
+    });
+    document.querySelector('[data-tag="all"]').classList.add('active');
+    
+    filterCollections();
+  }
+  
+  // Initialize
+  loadCollections();
+  setupSearch();
+  setupTagFilter();
+</script>
+
+<style>
+  .search-section {
+    margin-bottom: 32px;
+  }
+  
+  .search-container {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  
+  .search-input {
+    width: 100%;
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    font-size: 16px;
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-background);
+    transition: all 0.2s ease;
+  }
+  
+  .search-input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px rgb(37 99 235 / 0.1);
+  }
+  
+  .filter-tags {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  
+  .filter-label {
+    font-size: 14px;
+    color: var(--color-text-secondary);
+    font-weight: 500;
+  }
+  
+  .tag-btn {
+    padding: 6px 12px;
+    font-size: 13px;
+    border: 1.5px solid var(--color-border);
+    border-radius: 16px;
+    background: var(--color-background-secondary);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+    min-height: auto;
+  }
+  
+  .tag-btn:hover {
+    border-color: var(--color-accent);
+    background: var(--color-accent);
+    color: white;
+  }
+  
+  .tag-btn.active {
+    background: var(--color-accent);
+    color: white;
+    border-color: var(--color-accent);
+  }
+  
+  .collection-tags {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  
+  .tag {
+    padding: 2px 8px;
+    font-size: 11px;
+    background: var(--color-background-secondary);
+    color: var(--color-text-secondary);
+    border-radius: 12px;
+    font-weight: 500;
+  }
+  
+  .loading {
+    text-align: center;
+    padding: 48px;
+    color: var(--color-text-secondary);
+  }
+</style> 

@@ -1,0 +1,14 @@
+<!-- This is a placeholder for the Open Graph image -->
+<!-- In production, you would create a proper 1200x630 PNG image -->
+<!-- For now, we'll use a simple SVG that can be converted -->
+<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2563eb;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1d4ed8;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <text x="600" y="280" font-family="Inter, sans-serif" font-size="72" font-weight="700" text-anchor="middle" fill="white">TypaVibe</text>
+  <text x="600" y="350" font-family="Inter, sans-serif" font-size="32" font-weight="400" text-anchor="middle" fill="rgba(255,255,255,0.9)">Create and share curated collections</text>
+</svg> 

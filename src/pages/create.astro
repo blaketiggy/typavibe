@@ -33,6 +33,37 @@ const quickTitle = Astro.url.searchParams.get('quick') || '';
         placeholder="What's this collection about?"
       ></textarea>
       
+      <!-- Tag selection -->
+      <div class="tag-selection">
+        <label>Tags (optional):</label>
+        <div class="tag-options">
+          <label class="tag-option">
+            <input type="checkbox" value="fashion" />
+            <span>Fashion</span>
+          </label>
+          <label class="tag-option">
+            <input type="checkbox" value="tech" />
+            <span>Tech</span>
+          </label>
+          <label class="tag-option">
+            <input type="checkbox" value="home" />
+            <span>Home</span>
+          </label>
+          <label class="tag-option">
+            <input type="checkbox" value="beauty" />
+            <span>Beauty</span>
+          </label>
+          <label class="tag-option">
+            <input type="checkbox" value="fitness" />
+            <span>Fitness</span>
+          </label>
+          <label class="tag-option">
+            <input type="checkbox" value="food" />
+            <span>Food</span>
+          </label>
+        </div>
+      </div>
+      
       <button type="submit">Create Collection</button>
     </form>
   </main>
@@ -46,6 +77,12 @@ const quickTitle = Astro.url.searchParams.get('quick') || '';
       const title = document.getElementById('title').value;
       const description = document.getElementById('description').value;
       
+      // Get selected tags
+      const selectedTags = [];
+      document.querySelectorAll('.tag-option input:checked').forEach(checkbox => {
+        selectedTags.push(checkbox.value);
+      });
+      
       // Create slug from title
       const slug = title.toLowerCase()
         .replace(/\s+/g, '-')
@@ -57,6 +94,7 @@ const quickTitle = Astro.url.searchParams.get('quick') || '';
         title: title,
         description: description,
         slug: slug,
+        tags: selectedTags,
         is_anonymous: true,
         anon_session_id: anonymousSession.getSessionId(),
         items: [],
@@ -71,4 +109,50 @@ const quickTitle = Astro.url.searchParams.get('quick') || '';
       window.location.href = `/demo/${slug}`;
     });
   </script>
-</Layout> 
+</Layout>
+
+<style>
+  .tag-selection {
+    margin-bottom: 20px;
+  }
+  
+  .tag-selection label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--color-text);
+  }
+  
+  .tag-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .tag-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1.5px solid var(--color-border);
+    border-radius: 16px;
+    background: var(--color-background-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 13px;
+  }
+  
+  .tag-option:hover {
+    border-color: var(--color-accent);
+    background: rgb(37 99 235 / 0.05);
+  }
+  
+  .tag-option input {
+    margin: 0;
+  }
+  
+  .tag-option input:checked + span {
+    color: var(--color-accent);
+    font-weight: 500;
+  }
+</style> 

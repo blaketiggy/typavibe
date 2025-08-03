@@ -2,9 +2,34 @@
 export interface Props {
   title: string;
   description?: string;
+  image?: string;
+  url?: string;
+  type?: string;
+  structuredData?: object;
 }
 
-const { title, description = "Create and share curated product collections" } = Astro.props;
+const { 
+  title, 
+  description = "Create and share curated product collections", 
+  image = "/og-image.png",
+  url = Astro.url.href,
+  type = "website",
+  structuredData
+} = Astro.props;
+
+// Default structured data for the website
+const defaultStructuredData = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "TypaVibe",
+  "description": "Create and share curated product collections instantly",
+  "url": "https://typavibe.netlify.app",
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": "https://typavibe.netlify.app/explore?search={search_term_string}",
+    "query-input": "required name=search_term_string"
+  }
+};
 ---
 
 <!DOCTYPE html>
@@ -15,15 +40,140 @@ const { title, description = "Create and share curated product collections" } = 
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{title}</title>
     
-    <!-- Open Graph -->
+    <!-- SEO Meta Tags -->
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="author" content="TypaVibe" />
+    <meta name="theme-color" content="#2563eb" />
+    <link rel="canonical" href={url} />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content={type} />
+    <meta property="og:url" content={url} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    <meta property="og:type" content="website" />
+    <meta property="og:image" content={new URL(image, Astro.url)} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:site_name" content="TypaVibe" />
+    <meta property="og:locale" content="en_US" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content={url} />
+    <meta property="twitter:title" content={title} />
+    <meta property="twitter:description" content={description} />
+    <meta property="twitter:image" content={new URL(image, Astro.url)} />
+    <meta property="twitter:site" content="@typavibe" />
+    
+    <!-- Additional SEO -->
+    <meta name="keywords" content="collections, curation, products, shopping, lifestyle, fashion, tech, home, beauty, fitness, food" />
+    <meta name="application-name" content="TypaVibe" />
+    <meta name="apple-mobile-web-app-title" content="TypaVibe" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    
+    <!-- Favicon and Icons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    
+    <!-- Preconnect to external domains -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    
+    <!-- Structured Data -->
+    <script type="application/ld+json" set:html={JSON.stringify(structuredData || defaultStructuredData)} />
+    
+    <!-- Performance optimizations -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" as="style" />
+    <link rel="preload" href="/og-image.png" as="image" />
+    
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-XXXXXXXXXX', {
+        page_title: '{title}',
+        page_location: '{url}'
+      });
+    </script>
   </head>
   <body>
     <div class="container">
       <slot />
     </div>
+    
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(registration => {
+              console.log('SW registered: ', registration);
+            })
+            .catch(registrationError => {
+              console.log('SW registration failed: ', registrationError);
+            });
+        });
+      }
+      
+      // Performance monitoring
+      if ('performance' in window) {
+        window.addEventListener('load', () => {
+          setTimeout(() => {
+            const perfData = performance.getEntriesByType('navigation')[0];
+            const loadTime = perfData.loadEventEnd - perfData.loadEventStart;
+            console.log('Page load time:', loadTime, 'ms');
+            
+            // Send performance data to analytics
+            if (typeof gtag !== 'undefined') {
+              gtag('event', 'timing_complete', {
+                name: 'load',
+                value: Math.round(loadTime)
+              });
+            }
+          }, 0);
+        });
+      }
+      
+      // Custom event tracking
+      function trackEvent(eventName, parameters = {}) {
+        if (typeof gtag !== 'undefined') {
+          gtag('event', eventName, parameters);
+        }
+      }
+      
+      // Track collection creation
+      window.trackCollectionCreated = function(collectionTitle) {
+        trackEvent('collection_created', {
+          collection_title: collectionTitle
+        });
+      };
+      
+      // Track collection view
+      window.trackCollectionViewed = function(collectionTitle) {
+        trackEvent('collection_viewed', {
+          collection_title: collectionTitle
+        });
+      };
+      
+      // Track item added
+      window.trackItemAdded = function(itemTitle) {
+        trackEvent('item_added', {
+          item_title: itemTitle
+        });
+      };
+      
+      // Track search
+      window.trackSearch = function(searchTerm) {
+        trackEvent('search', {
+          search_term: searchTerm
+        });
+      };
+    </script>
   </body>
 </html>
 
@@ -350,6 +500,53 @@ const { title, description = "Create and share curated product collections" } = 
     max-width: none;
   }
 
+  /* Social sharing */
+  .share-buttons {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .share-btn {
+    padding: 8px 16px;
+    font-size: 14px;
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+    min-height: auto;
+  }
+
+  .share-btn.twitter {
+    background: #1da1f2;
+    color: white;
+  }
+
+  .share-btn.facebook {
+    background: #1877f2;
+    color: white;
+  }
+
+  .share-btn.linkedin {
+    background: #0077b5;
+    color: white;
+  }
+
+  .share-btn.copy {
+    background: var(--color-background-secondary);
+    color: var(--color-text);
+    border: 1.5px solid var(--color-border);
+  }
+
+  .share-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+  }
+
   /* Loading states */
   .loading {
     opacity: 0.6;
@@ -373,5 +570,22 @@ const { title, description = "Create and share curated product collections" } = 
   *:focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: 2px;
+  }
+
+  /* Performance optimizations */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* Print styles */
+  @media print {
+    .share-buttons,
+    .btn-secondary {
+      display: none !important;
+    }
   }
 </style>
