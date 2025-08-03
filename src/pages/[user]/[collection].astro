@@ -41,10 +41,7 @@ const title = `Sample Collection by Demo User`;
       </button>
     </div>
     
-    <!-- Edit button for anonymous collections -->
-    <button id="edit-btn" onclick="editCollection()" class="btn-secondary" style="display:none; margin-top: 12px;">
-      Edit Collection
-    </button>
+    <!-- No edit button for published collections -->
   </main>
 </Layout>
 
@@ -77,17 +74,20 @@ const title = `Sample Collection by Demo User`;
       document.getElementById('collection-description').textContent = anonCollection.description;
       document.getElementById('collection-views').textContent = `${anonCollection.view_count || 0} views`;
       
-      // Show edit button for anonymous collections
-      document.getElementById('edit-btn').style.display = 'inline-flex';
+      // No edit button for published collections
       
       // Load items
       const itemsContainer = document.getElementById('collection-items');
       if (anonCollection.items && anonCollection.items.length > 0) {
         itemsContainer.innerHTML = anonCollection.items.map(item => `
           <div class="item">
-            <h3><a href="${item.url}" target="_blank">${item.title}</a></h3>
-            <p>${item.description}</p>
-            ${item.price ? `<span class="price">$${item.price}</span>` : ''}
+            <a href="${item.url}" target="_blank" class="item-link">
+              <div class="item-content">
+                <h3>${item.title}</h3>
+                ${item.description ? `<p>${item.description}</p>` : ''}
+                ${item.price ? `<span class="price">${item.price}</span>` : ''}
+              </div>
+            </a>
           </div>
         `).join('');
       } else {
@@ -118,14 +118,22 @@ const title = `Sample Collection by Demo User`;
       
       document.getElementById('collection-items').innerHTML = `
         <div class="item">
-          <h3><a href="#" target="_blank">Sample Item 1</a></h3>
-          <p>This is a sample item in the collection.</p>
-          <span class="price">$29.99</span>
+          <a href="#" target="_blank" class="item-link">
+            <div class="item-content">
+              <h3>Sample Item 1</h3>
+              <p>This is a sample item in the collection.</p>
+              <span class="price">$29.99</span>
+            </div>
+          </a>
         </div>
         <div class="item">
-          <h3><a href="#" target="_blank">Sample Item 2</a></h3>
-          <p>Another sample item for testing.</p>
-          <span class="price">$49.99</span>
+          <a href="#" target="_blank" class="item-link">
+            <div class="item-content">
+              <h3>Sample Item 2</h3>
+              <p>Another sample item for testing.</p>
+              <span class="price">$49.99</span>
+            </div>
+          </a>
         </div>
       `;
     }
@@ -207,4 +215,73 @@ const title = `Sample Collection by Demo User`;
   
   // Load collection when page loads
   loadCollection();
-</script> 
+</script>
+
+<style>
+  .item {
+    background: var(--color-background-secondary);
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 16px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    overflow: hidden;
+  }
+  
+  .item:hover {
+    border-color: var(--color-border-hover);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+  }
+  
+  .item-link {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    padding: 20px;
+  }
+  
+  .item-content h3 {
+    margin: 0 0 8px 0;
+    color: var(--color-text);
+    font-weight: 600;
+  }
+  
+  .item-content p {
+    color: var(--color-text-secondary);
+    margin: 0 0 8px 0;
+    line-height: 1.5;
+  }
+  
+  .item-content .price {
+    color: var(--color-accent);
+    font-weight: 600;
+    font-size: 14px;
+  }
+  
+  .share-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 32px;
+    flex-wrap: wrap;
+  }
+  
+  .share-btn {
+    padding: 8px 16px;
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-background-secondary);
+    color: var(--color-text);
+    text-decoration: none;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .share-btn:hover {
+    border-color: var(--color-accent);
+    background: var(--color-accent);
+    color: white;
+  }
+</style> 

@@ -227,7 +227,18 @@ const { collection } = Astro.params;
   
   function addItem() {
     const url = document.getElementById('item-url').value;
-    const title = document.getElementById('item-title').value || 'Product from link';
+    let title = document.getElementById('item-title').value;
+    
+    // If no title provided, try to extract from URL
+    if (!title.trim()) {
+      try {
+        const domain = new URL(url).hostname;
+        title = domain.replace('www.', '');
+      } catch (error) {
+        title = 'Product from link';
+      }
+    }
+    
     const description = document.getElementById('item-notes').value;
     const price = document.getElementById('item-price').value;
     
@@ -255,6 +266,18 @@ const { collection } = Astro.params;
     cancelAddItem();
     console.log('Calling loadItems...');
     loadItems();
+  }
+  
+  // Function to extract title from URL (optional enhancement)
+  async function extractTitleFromUrl(url) {
+    try {
+      // This would require a server-side proxy to avoid CORS issues
+      // For now, we'll use a simple approach
+      const domain = new URL(url).hostname;
+      return domain.replace('www.', '');
+    } catch (error) {
+      return 'Product from link';
+    }
   }
   
   // Make functions globally accessible
