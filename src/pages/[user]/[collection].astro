@@ -161,14 +161,39 @@ const title = `Sample Collection by Demo User`;
     const url = window.location.href;
     const text = `${title} on TypaVibe`;
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
-    window.open(twitterUrl, '_blank', 'width=600,height=400');
+    
+    // Try Web Share API first (mobile)
+    if (navigator.share) {
+      navigator.share({
+        title: title,
+        text: text,
+        url: url
+      }).catch(() => {
+        // Fallback to Twitter
+        window.open(twitterUrl, '_blank', 'width=600,height=400');
+      });
+    } else {
+      window.open(twitterUrl, '_blank', 'width=600,height=400');
+    }
   }
   
   function shareToFacebook(e) {
     e.preventDefault();
     const url = window.location.href;
     const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
-    window.open(facebookUrl, '_blank', 'width=600,height=400');
+    
+    // Try Web Share API first (mobile)
+    if (navigator.share) {
+      navigator.share({
+        title: currentCollection?.title || 'Check out this collection',
+        url: url
+      }).catch(() => {
+        // Fallback to Facebook
+        window.open(facebookUrl, '_blank', 'width=600,height=400');
+      });
+    } else {
+      window.open(facebookUrl, '_blank', 'width=600,height=400');
+    }
   }
   
   function shareToLinkedIn(e) {
@@ -176,11 +201,39 @@ const title = `Sample Collection by Demo User`;
     const title = currentCollection?.title || 'Check out this collection';
     const url = window.location.href;
     const linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}`;
-    window.open(linkedinUrl, '_blank', 'width=600,height=400');
+    
+    // Try Web Share API first (mobile)
+    if (navigator.share) {
+      navigator.share({
+        title: title,
+        url: url
+      }).catch(() => {
+        // Fallback to LinkedIn
+        window.open(linkedinUrl, '_blank', 'width=600,height=400');
+      });
+    } else {
+      window.open(linkedinUrl, '_blank', 'width=600,height=400');
+    }
   }
   
   function copyToClipboard() {
     const url = window.location.href;
+    
+    // Try Web Share API first (mobile)
+    if (navigator.share) {
+      navigator.share({
+        title: currentCollection?.title || 'Check out this collection',
+        url: url
+      }).catch(() => {
+        // Fallback to clipboard
+        copyUrlToClipboard(url);
+      });
+    } else {
+      copyUrlToClipboard(url);
+    }
+  }
+  
+  function copyUrlToClipboard(url) {
     navigator.clipboard.writeText(url).then(() => {
       // Show success feedback
       const btn = event.target;
@@ -195,7 +248,26 @@ const title = `Sample Collection by Demo User`;
         btn.style.color = '';
       }, 2000);
     }).catch(() => {
-      alert('Failed to copy link. Please copy manually: ' + url);
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = url;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      
+      // Show success feedback
+      const btn = event.target;
+      const originalText = btn.textContent;
+      btn.textContent = '✅ Copied!';
+      btn.style.background = '#10b981';
+      btn.style.color = 'white';
+      
+      setTimeout(() => {
+        btn.textContent = originalText;
+        btn.style.background = '';
+        btn.style.color = '';
+      }, 2000);
     });
   }
   
@@ -215,6 +287,13 @@ const title = `Sample Collection by Demo User`;
   
   // Load collection when page loads
   loadCollection();
+  
+  // Make functions globally accessible
+  window.shareToTwitter = shareToTwitter;
+  window.shareToFacebook = shareToFacebook;
+  window.shareToLinkedIn = shareToLinkedIn;
+  window.copyToClipboard = copyToClipboard;
+  window.copyUrlToClipboard = copyUrlToClipboard;
 </script>
 
 <style>
