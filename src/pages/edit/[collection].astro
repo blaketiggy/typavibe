@@ -1,0 +1,321 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+const { collection } = Astro.params;
+---
+
+<Layout title="Edit Collection - TypaVibe">
+  <main>
+    <header>
+      <h1 id="edit-title">Edit Collection</h1>
+      <p id="edit-description">Loading...</p>
+    </header>
+    
+    <section class="edit-section">
+      <h2>Collection Details</h2>
+      <form id="edit-form">
+        <input 
+          id="title-input" 
+          placeholder="Collection title" 
+          required 
+        />
+        <textarea 
+          id="description-input" 
+          placeholder="What's this collection about?"
+        ></textarea>
+        <button type="submit">Save Changes</button>
+      </form>
+    </section>
+    
+    <section class="edit-section">
+      <h2>Add Items</h2>
+      <form id="add-item-form">
+        <input 
+          id="item-url" 
+          placeholder="Product URL" 
+          type="url" 
+          required 
+        />
+        <input 
+          id="item-title" 
+          placeholder="Item title" 
+          required 
+        />
+        <textarea 
+          id="item-description" 
+          placeholder="Item description"
+        ></textarea>
+        <input 
+          id="item-price" 
+          placeholder="Price (optional)" 
+          type="number" 
+          step="0.01" 
+          min="0"
+        />
+        <button type="submit">Add Item</button>
+      </form>
+    </section>
+    
+    <section class="edit-section">
+      <h2>Collection Items</h2>
+      <p style="color: var(--color-text-secondary); margin-bottom: 16px;">
+        Drag and drop items to reorder them
+      </p>
+      <div id="items-list">
+        <p>Loading items...</p>
+      </div>
+    </section>
+    
+    <div style="margin-top: 48px; text-align: center;">
+      <button onclick="window.location.href='/demo/' + window.location.pathname.split('/').pop()" class="btn-primary">
+        View Collection
+      </button>
+      <button onclick="window.location.href='/'" class="btn-secondary" style="margin-left: 12px;">
+        Back to Home
+      </button>
+    </div>
+  </main>
+</Layout>
+
+<script>
+  import { anonymousSession } from '../../lib/anonymous.js';
+  
+  let currentCollection = null;
+  let draggedItem = null;
+  
+  // Load collection data
+  function loadCollection() {
+    const { collection } = Astro.params;
+    const anonCollection = anonymousSession.getCollectionBySlug(collection);
+    
+    if (anonCollection) {
+      currentCollection = anonCollection;
+      
+      // Populate form fields
+      document.getElementById('title-input').value = anonCollection.title;
+      document.getElementById('description-input').value = anonCollection.description;
+      document.getElementById('edit-title').textContent = `Edit: ${anonCollection.title}`;
+      document.getElementById('edit-description').textContent = anonCollection.description;
+      
+      // Load items
+      loadItems();
+    } else {
+      alert('Collection not found!');
+      window.location.href = '/';
+    }
+  }
+  
+  function loadItems() {
+    const itemsContainer = document.getElementById('items-list');
+    
+    if (currentCollection.items && currentCollection.items.length > 0) {
+      itemsContainer.innerHTML = currentCollection.items.map((item, index) => `
+        <div class="draggable-item" draggable="true" data-index="${index}">
+          <div class="drag-handle">⋮⋮</div>
+          <div class="item-content">
+            <h3><a href="${item.url}" target="_blank">${item.title}</a></h3>
+            <p>${item.description}</p>
+            ${item.price ? `<span class="price">$${item.price}</span>` : ''}
+          </div>
+          <button onclick="deleteItem(${index})" class="btn-secondary delete-btn">
+            Delete
+          </button>
+        </div>
+      `).join('');
+      
+      // Add drag and drop event listeners
+      setupDragAndDrop();
+    } else {
+      itemsContainer.innerHTML = '<p>No items in this collection yet. Add your first item above!</p>';
+    }
+  }
+  
+  function setupDragAndDrop() {
+    const items = document.querySelectorAll('.draggable-item');
+    
+    items.forEach(item => {
+      item.addEventListener('dragstart', handleDragStart);
+      item.addEventListener('dragend', handleDragEnd);
+      item.addEventListener('dragover', handleDragOver);
+      item.addEventListener('drop', handleDrop);
+    });
+  }
+  
+  function handleDragStart(e) {
+    draggedItem = this;
+    this.style.opacity = '0.4';
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', this.outerHTML);
+  }
+  
+  function handleDragEnd(e) {
+    this.style.opacity = '1';
+    document.querySelectorAll('.draggable-item').forEach(item => {
+      item.classList.remove('over');
+    });
+  }
+  
+  function handleDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  }
+  
+  function handleDrop(e) {
+    e.preventDefault();
+    
+    if (draggedItem !== this) {
+      const allItems = [...document.querySelectorAll('.draggable-item')];
+      const draggedIndex = parseInt(draggedItem.dataset.index);
+      const droppedIndex = parseInt(this.dataset.index);
+      
+      // Reorder the items array
+      const reorderedItems = [...currentCollection.items];
+      const [movedItem] = reorderedItems.splice(draggedIndex, 1);
+      reorderedItems.splice(droppedIndex, 0, movedItem);
+      
+      // Update the collection
+      currentCollection.items = reorderedItems;
+      anonymousSession.updateCollection(currentCollection.slug, {
+        items: reorderedItems
+      });
+      
+      // Reload the items display
+      loadItems();
+    }
+  }
+  
+  function deleteItem(index) {
+    if (confirm('Are you sure you want to delete this item?')) {
+      currentCollection.items.splice(index, 1);
+      anonymousSession.updateCollection(currentCollection.slug, {
+        items: currentCollection.items
+      });
+      loadItems();
+    }
+  }
+  
+  // Handle collection edit form
+  document.getElementById('edit-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    
+    const title = document.getElementById('title-input').value;
+    const description = document.getElementById('description-input').value;
+    
+    anonymousSession.updateCollection(currentCollection.slug, {
+      title: title,
+      description: description
+    });
+    
+    currentCollection.title = title;
+    currentCollection.description = description;
+    
+    document.getElementById('edit-title').textContent = `Edit: ${title}`;
+    document.getElementById('edit-description').textContent = description;
+    
+    alert('Collection updated!');
+  });
+  
+  // Handle add item form
+  document.getElementById('add-item-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    
+    const url = document.getElementById('item-url').value;
+    const title = document.getElementById('item-title').value;
+    const description = document.getElementById('item-description').value;
+    const price = document.getElementById('item-price').value;
+    
+    const newItem = {
+      url: url,
+      title: title,
+      description: description,
+      price: price ? parseFloat(price) : null
+    };
+    
+    if (!currentCollection.items) {
+      currentCollection.items = [];
+    }
+    
+    currentCollection.items.push(newItem);
+    anonymousSession.updateCollection(currentCollection.slug, {
+      items: currentCollection.items
+    });
+    
+    // Clear form
+    document.getElementById('add-item-form').reset();
+    
+    // Reload items
+    loadItems();
+    
+    alert('Item added to collection!');
+  });
+  
+  // Load collection when page loads
+  loadCollection();
+</script>
+
+<style>
+  .draggable-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--color-background-secondary);
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    margin-bottom: 12px;
+    transition: all 0.2s ease;
+    cursor: grab;
+  }
+  
+  .draggable-item:hover {
+    border-color: var(--color-border-hover);
+    background: white;
+  }
+  
+  .draggable-item:active {
+    cursor: grabbing;
+  }
+  
+  .drag-handle {
+    color: var(--color-text-secondary);
+    font-size: 18px;
+    cursor: grab;
+    user-select: none;
+    padding: 4px;
+  }
+  
+  .item-content {
+    flex: 1;
+  }
+  
+  .item-content h3 {
+    margin-bottom: 4px;
+  }
+  
+  .item-content h3 a {
+    color: var(--color-accent);
+    text-decoration: none;
+    font-weight: 600;
+  }
+  
+  .item-content h3 a:hover {
+    text-decoration: underline;
+  }
+  
+  .item-content p {
+    color: var(--color-text-secondary);
+    font-size: 14px;
+    margin-bottom: 8px;
+  }
+  
+  .delete-btn {
+    padding: 8px 16px;
+    font-size: 13px;
+    min-height: auto;
+  }
+  
+  .draggable-item.over {
+    border-color: var(--color-accent);
+    background: rgb(37 99 235 / 0.05);
+  }
+</style> 

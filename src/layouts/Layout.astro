@@ -332,6 +332,30 @@ const { title, description = "Create and share curated product collections" } = 
     margin-top: 8px;
   }
 
+  /* Edit sections */
+  .edit-section {
+    background: var(--color-background-secondary);
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+
+  .edit-section h2 {
+    margin-bottom: 16px;
+    color: var(--color-text);
+  }
+
+  .edit-section form {
+    max-width: none;
+  }
+
+  /* Loading states */
+  .loading {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
   /* Responsive utilities */
   .sr-only {
     position: absolute;
@@ -343,12 +367,6 @@ const { title, description = "Create and share curated product collections" } = 
     clip: rect(0, 0, 0, 0);
     white-space: nowrap;
     border: 0;
-  }
-
-  /* Loading states */
-  .loading {
-    opacity: 0.6;
-    pointer-events: none;
   }
 
   /* Smooth focus styles throughout */

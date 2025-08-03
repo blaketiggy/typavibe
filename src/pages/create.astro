@@ -7,11 +7,8 @@ if (Astro.request.method === 'POST') {
   const title = formData.get('title');
   const description = formData.get('description');
   
-  // For now, redirect to a sample collection
-  // Later this will create a real collection in Supabase
-  const slug = title?.toString().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || 'my-collection';
-  
-  return Astro.redirect(`/demo/${slug}`);
+  // Create collection logic here
+  // Redirect to collection page
 }
 
 const quickTitle = Astro.url.searchParams.get('quick') || '';
@@ -19,10 +16,11 @@ const quickTitle = Astro.url.searchParams.get('quick') || '';
 
 <Layout title="Create Collection - TypaVibe">
   <main>
-    <form method="POST">
+    <form id="create-form">
       <h1>Create Your Collection</h1>
       
       <input 
+        id="title" 
         name="title" 
         placeholder="Collection title" 
         value={quickTitle}
@@ -30,6 +28,7 @@ const quickTitle = Astro.url.searchParams.get('quick') || '';
       />
       
       <textarea 
+        id="description" 
         name="description" 
         placeholder="What's this collection about?"
       ></textarea>
@@ -37,4 +36,39 @@ const quickTitle = Astro.url.searchParams.get('quick') || '';
       <button type="submit">Create Collection</button>
     </form>
   </main>
+
+  <script>
+    import { anonymousSession } from '../lib/anonymous.js';
+    
+    document.getElementById('create-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const title = document.getElementById('title').value;
+      const description = document.getElementById('description').value;
+      
+      // Create slug from title
+      const slug = title.toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, '');
+      
+      // Create anonymous collection
+      const collection = {
+        id: 'anon_' + Date.now(),
+        title: title,
+        description: description,
+        slug: slug,
+        is_anonymous: true,
+        anon_session_id: anonymousSession.getSessionId(),
+        items: [],
+        view_count: 0,
+        created_at: new Date().toISOString()
+      };
+      
+      // Save to localStorage
+      anonymousSession.saveAnonymousCollection(collection);
+      
+      // Redirect to the collection page
+      window.location.href = `/demo/${slug}`;
+    });
+  </script>
 </Layout> 

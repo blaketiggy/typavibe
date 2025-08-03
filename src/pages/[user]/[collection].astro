@@ -10,27 +10,115 @@ const title = `Sample Collection by Demo User`;
 <Layout title={title} description="A sample collection for testing">
   <main>
     <header>
-      <h1>Sample Collection</h1>
-      <p>This is a sample collection to test the design and layout.</p>
-      <small>42 views</small>
+      <h1 id="collection-title">Loading...</h1>
+      <p id="collection-description">Loading...</p>
+      <small id="collection-views">0 views</small>
     </header>
     
-    <section class="items">
-      <div class="item">
-        <h3><a href="#" target="_blank">Sample Item 1</a></h3>
-        <p>This is a sample item in the collection.</p>
-        <span class="price">$29.99</span>
-      </div>
-      <div class="item">
-        <h3><a href="#" target="_blank">Sample Item 2</a></h3>
-        <p>Another sample item for testing.</p>
-        <span class="price">$49.99</span>
-      </div>
+    <section class="items" id="collection-items">
+      <div class="loading">Loading collection...</div>
     </section>
     
     <!-- Share buttons -->
-    <button onclick="navigator.share({title: 'Sample Collection', url: window.location.href})">
+    <button onclick="shareCollection()" class="btn-primary">
       Share Collection
     </button>
+    
+    <!-- Edit button for anonymous collections -->
+    <button id="edit-btn" onclick="editCollection()" class="btn-secondary" style="display:none; margin-left: 12px;">
+      Edit Collection
+    </button>
   </main>
-</Layout> 
+</Layout>
+
+<script>
+  import { anonymousSession } from '../../lib/anonymous.js';
+  
+  // Load collection data
+  async function loadCollection() {
+    const { collection } = Astro.params;
+    
+    // Try to load from anonymous collections first
+    const anonCollection = anonymousSession.getCollectionBySlug(collection);
+    
+    if (anonCollection) {
+      // This is an anonymous collection
+      document.getElementById('collection-title').textContent = anonCollection.title;
+      document.getElementById('collection-description').textContent = anonCollection.description;
+      document.getElementById('collection-views').textContent = `${anonCollection.view_count || 0} views`;
+      
+      // Show edit button for anonymous collections
+      document.getElementById('edit-btn').style.display = 'inline-flex';
+      
+      // Load items
+      const itemsContainer = document.getElementById('collection-items');
+      if (anonCollection.items && anonCollection.items.length > 0) {
+        itemsContainer.innerHTML = anonCollection.items.map(item => `
+          <div class="item">
+            <h3><a href="${item.url}" target="_blank">${item.title}</a></h3>
+            <p>${item.description}</p>
+            ${item.price ? `<span class="price">$${item.price}</span>` : ''}
+          </div>
+        `).join('');
+      } else {
+        itemsContainer.innerHTML = `
+          <div style="text-align: center; padding: 48px; color: var(--color-text-secondary);">
+            <p>No items in this collection yet.</p>
+            <button onclick="addItem()" class="btn-primary">Add Your First Item</button>
+          </div>
+        `;
+      }
+      
+      // Increment view count
+      anonymousSession.updateCollection(collection, {
+        view_count: (anonCollection.view_count || 0) + 1
+      });
+      
+    } else {
+      // Fallback to sample collection
+      document.getElementById('collection-title').textContent = 'Sample Collection';
+      document.getElementById('collection-description').textContent = 'This is a sample collection to test the design and layout.';
+      document.getElementById('collection-views').textContent = '42 views';
+      
+      document.getElementById('collection-items').innerHTML = `
+        <div class="item">
+          <h3><a href="#" target="_blank">Sample Item 1</a></h3>
+          <p>This is a sample item in the collection.</p>
+          <span class="price">$29.99</span>
+        </div>
+        <div class="item">
+          <h3><a href="#" target="_blank">Sample Item 2</a></h3>
+          <p>Another sample item for testing.</p>
+          <span class="price">$49.99</span>
+        </div>
+      `;
+    }
+  }
+  
+  function shareCollection() {
+    const { collection } = Astro.params;
+    const title = document.getElementById('collection-title').textContent;
+    const url = window.location.href;
+    
+    if (navigator.share) {
+      navigator.share({ title, url });
+    } else {
+      // Fallback: copy to clipboard
+      navigator.clipboard.writeText(url);
+      alert('Collection URL copied to clipboard!');
+    }
+  }
+  
+  function editCollection() {
+    const { collection } = Astro.params;
+    window.location.href = `/edit/${collection}`;
+  }
+  
+  function addItem() {
+    const { collection } = Astro.params;
+    window.location.href = `/edit/${collection}#add-item`;
+  }
+  
+  // Load collection when page loads
+  loadCollection();
+</script> 
