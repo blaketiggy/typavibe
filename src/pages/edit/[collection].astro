@@ -41,7 +41,7 @@ const { collection } = Astro.params;
     </div>
     
     <div style="margin-top: 48px; text-align: center;">
-      <button onclick="publishCollection()" class="btn-primary">
+      <button id="publish-btn" class="btn-primary">
         🚀 Publish & Share
       </button>
       <button onclick="window.location.href='/'" class="btn-secondary" style="margin-left: 12px;">
@@ -176,6 +176,9 @@ const { collection } = Astro.params;
     // Focus back on URL input for quick adding
     document.getElementById('item-url').focus();
   });
+  
+  // Handle publish button click
+  document.getElementById('publish-btn').addEventListener('click', publishCollection);
   
   // Load collection when page loads
   loadCollection();
