@@ -63,8 +63,10 @@ const { collection } = Astro.params;
     const collection = pathParts[pathParts.length - 1];
     
     console.log('Collection slug from URL:', collection);
+    console.log('All path parts:', pathParts);
     
     const anonCollection = anonymousSession.getCollectionBySlug(collection);
+    console.log('Anonymous session result:', anonCollection);
     
     if (anonCollection) {
       currentCollection = anonCollection;
@@ -79,6 +81,7 @@ const { collection } = Astro.params;
       loadItems();
     } else {
       console.log('Collection not found for slug:', collection);
+      console.log('Available collections:', anonymousSession.getAnonymousCollections());
       alert('Collection not found!');
       window.location.href = '/';
     }
@@ -128,11 +131,19 @@ const { collection } = Astro.params;
     e.preventDefault();
     console.log('Form submitted!');
     
+    // Check if collection is loaded
+    if (!currentCollection) {
+      console.error('Current collection is null!');
+      alert('Collection not loaded. Please refresh the page.');
+      return;
+    }
+    
     const url = document.getElementById('item-url').value;
     const title = document.getElementById('item-title').value;
     
     console.log('URL:', url);
     console.log('Title:', title);
+    console.log('Current collection before adding:', currentCollection);
     
     const newItem = {
       url: url,
