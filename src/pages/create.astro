@@ -209,8 +209,19 @@ import Layout from '../layouts/Layout.astro';
         
         console.log('Collection created in database:', collection);
         
+        // Debug the redirect URL
+        console.log('Current user:', currentUser);
+        console.log('Username:', currentUser.username);
+        console.log('Slug:', slug);
+        console.log('Redirect URL:', `/edit/${currentUser.username}/${slug}`);
+        
         // Redirect to edit page with proper user structure
-        window.location.href = `/edit/${currentUser.username}/${slug}`;
+        if (currentUser.username) {
+          window.location.href = `/edit/${currentUser.username}/${slug}`;
+        } else {
+          console.error('Username not found, redirecting to anonymous');
+          window.location.href = `/edit/anonymous/${slug}`;
+        }
         
       } else {
         // Save to localStorage for anonymous user

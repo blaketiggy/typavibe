@@ -124,7 +124,16 @@ const { user, collection } = Astro.params;
     userSlug = pathParts[2]; // /edit/[user]/[collection]
     collectionSlug = pathParts[3];
     
+    console.log('Edit page - pathParts:', pathParts);
     console.log('Edit page - user:', userSlug, 'collection:', collectionSlug);
+    
+    // Handle malformed URLs
+    if (!userSlug || !collectionSlug) {
+      console.error('Malformed URL - missing user or collection slug');
+      alert('Invalid URL. Please create a new collection.');
+      window.location.href = '/create';
+      return;
+    }
     
     // Update breadcrumbs
     updateBreadcrumbs();
