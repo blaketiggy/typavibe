@@ -105,8 +105,8 @@ const quickTitle = Astro.url.searchParams.get('quick') || '';
       // Save to localStorage
       anonymousSession.saveAnonymousCollection(collection);
       
-      // Redirect to the collection page
-      window.location.href = `/demo/${slug}`;
+      // Redirect to the edit page to add items
+      window.location.href = `/edit/${slug}`;
     });
   </script>
 </Layout>
