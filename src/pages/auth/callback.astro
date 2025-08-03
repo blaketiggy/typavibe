@@ -1,0 +1,114 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout title="Completing Signup - TypaVibe">
+  <main>
+    <div class="callback-container">
+      <h1>🔐 Completing Your Signup</h1>
+      <div id="status">Processing...</div>
+    </div>
+  </main>
+</Layout>
+
+<script>
+  import { supabase } from '../../lib/supabase.js';
+  
+  async function handleAuthCallback() {
+    const statusDiv = document.getElementById('status');
+    
+    try {
+      // Get the session from the URL
+      const { data, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (!data.session) {
+        statusDiv.innerHTML = `
+          <div style="color: #dc2626; margin-bottom: 16px;">❌ Invalid or expired link</div>
+          <button onclick="window.location.href='/auth'" class="btn-primary">Try Again</button>
+        `;
+        return;
+      }
+      
+      const user = data.session.user;
+      const username = user.user_metadata?.username;
+      
+      if (username) {
+        // This is a new user with a username - create their profile
+        statusDiv.innerHTML = '<div style="color: #f59e0b;">🔄 Setting up your profile...</div>';
+        
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            username: username,
+            display_name: username,
+            created_at: new Date().toISOString()
+          });
+        
+        if (profileError) {
+          console.error('Profile creation error:', profileError);
+          // Profile might already exist, continue anyway
+        }
+        
+        statusDiv.innerHTML = `
+          <div style="color: #10b981; margin-bottom: 16px;">✅ Account created successfully!</div>
+          <p style="color: var(--color-text-secondary); margin-bottom: 24px;">
+            Welcome to TypaVibe, @${username}!
+          </p>
+          <button onclick="window.location.href='/dashboard'" class="btn-primary">
+            Go to Dashboard
+          </button>
+        `;
+        
+      } else {
+        // This is an existing user signing in
+        statusDiv.innerHTML = `
+          <div style="color: #10b981; margin-bottom: 16px;">✅ Signed in successfully!</div>
+          <button onclick="window.location.href='/dashboard'" class="btn-primary">
+            Go to Dashboard
+          </button>
+        `;
+      }
+      
+    } catch (error) {
+      console.error('Auth callback error:', error);
+      statusDiv.innerHTML = `
+        <div style="color: #dc2626; margin-bottom: 16px;">❌ Error completing signup</div>
+        <p style="color: var(--color-text-secondary); margin-bottom: 24px;">
+          ${error.message}
+        </p>
+        <button onclick="window.location.href='/auth'" class="btn-primary">
+          Try Again
+        </button>
+      `;
+    }
+  }
+  
+  // Handle the callback when page loads
+  handleAuthCallback();
+</script>
+
+<style>
+  .callback-container {
+    max-width: 480px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 48px 24px;
+  }
+  
+  .callback-container h1 {
+    margin-bottom: 32px;
+  }
+  
+  #status {
+    background: var(--color-background-secondary);
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 32px;
+    margin-bottom: 24px;
+  }
+</style> 

@@ -22,27 +22,65 @@ import Layout from '../layouts/Layout.astro';
         </div>
         
         <div class="auth-option">
-          <h3>👤 Sign In</h3>
+          <h3>👤 Create Account</h3>
           <p>Save your collections and access them anywhere</p>
           
           <form id="auth-form">
-            <input 
-              id="email" 
-              type="email" 
-              placeholder="Enter your email" 
-              required 
-            />
-            <button type="submit" class="btn-primary">
-              Send Magic Link
+            <div class="form-group">
+              <input 
+                id="username" 
+                type="text" 
+                placeholder="Choose a username" 
+                required 
+                pattern="[a-zA-Z0-9_-]{3,20}"
+                title="Username must be 3-20 characters, letters, numbers, hyphens, and underscores only"
+              />
+              <div id="username-status" class="username-status"></div>
+            </div>
+            
+            <div class="form-group">
+              <input 
+                id="email" 
+                type="email" 
+                placeholder="Enter your email" 
+                required 
+              />
+            </div>
+            
+            <button type="submit" class="btn-primary" id="submit-btn">
+              Create Account
             </button>
           </form>
           
           <div id="auth-message" class="auth-message" style="display: none;"></div>
         </div>
+        
+        <div class="auth-divider">
+          <span>or</span>
+        </div>
+        
+        <div class="auth-option">
+          <h3>🔑 Sign In</h3>
+          <p>Already have an account?</p>
+          
+          <form id="signin-form">
+            <input 
+              id="signin-email" 
+              type="email" 
+              placeholder="Enter your email" 
+              required 
+            />
+            <button type="submit" class="btn-secondary">
+              Send Magic Link
+            </button>
+          </form>
+          
+          <div id="signin-message" class="auth-message" style="display: none;"></div>
+        </div>
       </div>
       
       <div class="auth-footer">
-        <p>Already have an account? <a href="/dashboard">Go to Dashboard</a></p>
+        <p>Need help? <a href="/test-auth">Test Authentication</a></p>
       </div>
     </div>
   </main>
@@ -51,11 +89,131 @@ import Layout from '../layouts/Layout.astro';
 <script>
   import { supabase } from '../lib/supabase.js';
   
+  let usernameCheckTimeout;
+  let isUsernameAvailable = false;
+  
+  // Username validation and availability check
+  document.getElementById('username').addEventListener('input', async (e) => {
+    const username = e.target.value;
+    const statusDiv = document.getElementById('username-status');
+    const submitBtn = document.getElementById('submit-btn');
+    
+    // Clear previous timeout
+    clearTimeout(usernameCheckTimeout);
+    
+    // Basic validation
+    if (username.length < 3) {
+      statusDiv.innerHTML = '<span style="color: #f59e0b;">⏳ Username must be at least 3 characters</span>';
+      isUsernameAvailable = false;
+      submitBtn.disabled = true;
+      return;
+    }
+    
+    if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
+      statusDiv.innerHTML = '<span style="color: #dc2626;">❌ Username can only contain letters, numbers, hyphens, and underscores</span>';
+      isUsernameAvailable = false;
+      submitBtn.disabled = true;
+      return;
+    }
+    
+    // Show checking status
+    statusDiv.innerHTML = '<span style="color: #f59e0b;">⏳ Checking availability...</span>';
+    submitBtn.disabled = true;
+    
+    // Debounce the check
+    usernameCheckTimeout = setTimeout(async () => {
+      try {
+        // Check if username exists in profiles table
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('username', username)
+          .single();
+        
+        if (error && error.code === 'PGRST116') {
+          // Username not found - available
+          statusDiv.innerHTML = '<span style="color: #10b981;">✅ Username available</span>';
+          isUsernameAvailable = true;
+          submitBtn.disabled = false;
+        } else if (data) {
+          // Username found - not available
+          statusDiv.innerHTML = '<span style="color: #dc2626;">❌ Username already taken</span>';
+          isUsernameAvailable = false;
+          submitBtn.disabled = true;
+        } else {
+          // Other error
+          statusDiv.innerHTML = '<span style="color: #dc2626;">❌ Error checking username</span>';
+          isUsernameAvailable = false;
+          submitBtn.disabled = true;
+        }
+      } catch (error) {
+        console.error('Username check error:', error);
+        statusDiv.innerHTML = '<span style="color: #dc2626;">❌ Error checking username</span>';
+        isUsernameAvailable = false;
+        submitBtn.disabled = true;
+      }
+    }, 500);
+  });
+  
+  // Create account form
   document.getElementById('auth-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     
+    if (!isUsernameAvailable) {
+      alert('Please choose an available username');
+      return;
+    }
+    
+    const username = document.getElementById('username').value;
     const email = document.getElementById('email').value;
     const messageDiv = document.getElementById('auth-message');
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    
+    try {
+      submitBtn.textContent = 'Creating Account...';
+      submitBtn.disabled = true;
+      
+      // Sign up with magic link
+      const { error } = await supabase.auth.signInWithOtp({
+        email: email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/dashboard`,
+          data: {
+            username: username
+          }
+        }
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      messageDiv.textContent = '✅ Magic link sent! Check your email to complete signup.';
+      messageDiv.className = 'auth-message success';
+      messageDiv.style.display = 'block';
+      
+      // Clear form
+      document.getElementById('username').value = '';
+      document.getElementById('email').value = '';
+      
+    } catch (error) {
+      console.error('Auth error:', error);
+      messageDiv.textContent = `❌ ${error.message}`;
+      messageDiv.className = 'auth-message error';
+      messageDiv.style.display = 'block';
+    } finally {
+      submitBtn.textContent = originalText;
+      submitBtn.disabled = false;
+    }
+  });
+  
+  // Sign in form
+  document.getElementById('signin-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const email = document.getElementById('signin-email').value;
+    const messageDiv = document.getElementById('signin-message');
     const submitBtn = e.target.querySelector('button[type="submit"]');
     const originalText = submitBtn.textContent;
     
@@ -79,10 +237,10 @@ import Layout from '../layouts/Layout.astro';
       messageDiv.style.display = 'block';
       
       // Clear form
-      document.getElementById('email').value = '';
+      document.getElementById('signin-email').value = '';
       
     } catch (error) {
-      console.error('Auth error:', error);
+      console.error('Sign in error:', error);
       messageDiv.textContent = `❌ ${error.message}`;
       messageDiv.className = 'auth-message error';
       messageDiv.style.display = 'block';
@@ -126,6 +284,17 @@ import Layout from '../layouts/Layout.astro';
   .auth-option p {
     color: var(--color-text-secondary);
     margin-bottom: 24px;
+  }
+  
+  .form-group {
+    margin-bottom: 16px;
+    text-align: left;
+  }
+  
+  .username-status {
+    margin-top: 4px;
+    font-size: 12px;
+    min-height: 16px;
   }
   
   .auth-divider {
