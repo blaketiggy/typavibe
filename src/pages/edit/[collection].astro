@@ -245,6 +245,14 @@ const { collection } = Astro.params;
     loadItems();
   }
   
+  // Make functions globally accessible
+  window.nextStep = nextStep;
+  window.prevStep = prevStep;
+  window.cancelAddItem = cancelAddItem;
+  window.addItem = addItem;
+  window.deleteItem = deleteItem;
+  window.publishCollection = publishCollection;
+  
   // Event listeners
   document.getElementById('add-item-btn').addEventListener('click', showAddItemForm);
   document.getElementById('publish-btn').addEventListener('click', publishCollection);
