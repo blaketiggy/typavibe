@@ -156,18 +156,18 @@ import Layout from '../layouts/Layout.astro';
     
     grid.innerHTML = filteredCollections.map(collection => `
       <article class="collection-card">
-        <h3>
-          <a href="${collection.is_anonymous ? `/demo/${collection.slug}` : `/demo/${collection.slug}`}">
-            ${collection.title}
-          </a>
-        </h3>
-        <p>${collection.description}</p>
-        <div class="collection-tags">
-          ${collection.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
-        </div>
-        <small>
-          by ${collection.username} • ${collection.view_count} views
-        </small>
+        <a href="${collection.is_anonymous ? `/demo/${collection.slug}` : `/demo/${collection.slug}`}" class="card-link">
+          <div class="card-content">
+            <h3>${collection.title}</h3>
+            <p>${collection.description}</p>
+            <div class="collection-tags">
+              ${collection.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+            </div>
+            <small>
+              by ${collection.username} • ${collection.view_count} views
+            </small>
+          </div>
+        </a>
       </article>
     `).join('');
   }
@@ -325,5 +325,50 @@ import Layout from '../layouts/Layout.astro';
     text-align: center;
     padding: 48px;
     color: var(--color-text-secondary);
+  }
+
+  .collection-card {
+    background: var(--color-background);
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    overflow: hidden;
+  }
+  
+  .collection-card:hover {
+    border-color: var(--color-border-hover);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+  }
+  
+  .card-link {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    height: 100%;
+  }
+  
+  .card-content {
+    padding: 24px;
+  }
+  
+  .collection-card h3 {
+    margin-bottom: 8px;
+    color: var(--color-text);
+    font-weight: 600;
+  }
+  
+  .collection-card p {
+    color: var(--color-text-secondary);
+    font-size: 14px;
+    margin-bottom: 12px;
+    line-height: 1.5;
+  }
+  
+  .collection-card small {
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    font-weight: 500;
   }
 </style> 

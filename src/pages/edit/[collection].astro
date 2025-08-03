@@ -20,17 +20,32 @@ const { collection } = Astro.params;
     <section class="add-item-section">
       <h2>Add Items</h2>
       <form id="add-item-form">
-        <input 
-          id="item-url" 
-          placeholder="Product URL" 
-          type="url" 
-          required 
-        />
-        <input 
-          id="item-title" 
-          placeholder="Item title" 
-          required 
-        />
+        <div class="form-row">
+          <input 
+            id="item-url" 
+            placeholder="Product URL" 
+            type="url" 
+            required 
+          />
+          <input 
+            id="item-title" 
+            placeholder="Item title" 
+            required 
+          />
+        </div>
+        <div class="form-row">
+          <textarea 
+            id="item-description" 
+            placeholder="Description (optional)" 
+            rows="2"
+          ></textarea>
+          <input 
+            id="item-price" 
+            placeholder="Price (optional)" 
+            type="text"
+            pattern="^\$?\d+(\.\d{2})?$"
+          />
+        </div>
         <button type="submit">Add Item</button>
       </form>
     </section>
@@ -97,7 +112,11 @@ const { collection } = Astro.params;
       console.log('Items found:', currentCollection.items);
       itemsContainer.innerHTML = currentCollection.items.map((item, index) => `
         <div class="item-display">
-          <h3><a href="${item.url}" target="_blank">${item.title}</a></h3>
+          <div class="item-content">
+            <h3><a href="${item.url}" target="_blank">${item.title}</a></h3>
+            ${item.description ? `<p class="item-description">${item.description}</p>` : ''}
+            ${item.price ? `<span class="item-price">${item.price}</span>` : ''}
+          </div>
           <button onclick="deleteItem(${index})" class="btn-secondary delete-btn">
             Delete
           </button>
@@ -143,15 +162,20 @@ const { collection } = Astro.params;
     
     const url = document.getElementById('item-url').value;
     const title = document.getElementById('item-title').value;
+    const description = document.getElementById('item-description').value;
+    const price = document.getElementById('item-price').value;
     
     console.log('URL:', url);
     console.log('Title:', title);
+    console.log('Description:', description);
+    console.log('Price:', price);
     console.log('Current collection before adding:', currentCollection);
     
     const newItem = {
       url: url,
       title: title,
-      description: title // Use title as description for simplicity
+      description: description,
+      price: price
     };
     
     console.log('New item:', newItem);
@@ -210,11 +234,23 @@ const { collection } = Astro.params;
   .add-item-section button {
     min-width: 100px;
   }
-  
+
+  .form-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .form-row textarea {
+    flex: 1;
+    resize: vertical;
+    min-height: 50px;
+  }
+
   .item-display {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     background: var(--color-background-secondary);
     border: 1.5px solid var(--color-border);
     border-radius: var(--radius-sm);
@@ -222,24 +258,42 @@ const { collection } = Astro.params;
     margin-bottom: 12px;
   }
   
-  .item-display h3 {
-    margin: 0;
+  .item-content {
     flex: 1;
+    margin-right: 12px;
   }
   
-  .item-display h3 a {
+  .item-content h3 {
+    margin: 0 0 4px 0;
+  }
+  
+  .item-content h3 a {
     color: var(--color-accent);
     text-decoration: none;
     font-weight: 600;
   }
   
-  .item-display h3 a:hover {
+  .item-content h3 a:hover {
     text-decoration: underline;
+  }
+  
+  .item-description {
+    color: var(--color-text-secondary);
+    font-size: 14px;
+    margin: 0 0 4px 0;
+    line-height: 1.4;
+  }
+  
+  .item-price {
+    color: var(--color-accent);
+    font-weight: 600;
+    font-size: 14px;
   }
   
   .delete-btn {
     padding: 8px 16px;
     font-size: 13px;
     min-height: auto;
+    flex-shrink: 0;
   }
 </style> 

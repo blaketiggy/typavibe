@@ -1,81 +1,119 @@
 ---
 import Layout from '../layouts/Layout.astro';
 
-// Handle form submission
-if (Astro.request.method === 'POST') {
-  const formData = await Astro.request.formData();
-  const title = formData.get('title');
-  const description = formData.get('description');
-  
-  // Create collection logic here
-  // Redirect to collection page
-}
-
 const quickTitle = Astro.url.searchParams.get('quick') || '';
 ---
 
 <Layout title="Create Collection - TypaVibe">
   <main>
-    <form id="create-form">
+    <div class="create-flow">
       <h1>Create Your Collection</h1>
+      <p class="subtitle">Start by adding your first link</p>
       
-      <input 
-        id="title" 
-        name="title" 
-        placeholder="Collection title" 
-        value={quickTitle}
-        required 
-      />
-      
-      <textarea 
-        id="description" 
-        name="description" 
-        placeholder="What's this collection about?"
-      ></textarea>
-      
-      <!-- Tag selection -->
-      <div class="tag-selection">
-        <label>Tags (optional):</label>
-        <div class="tag-options">
-          <label class="tag-option">
-            <input type="checkbox" value="fashion" />
-            <span>Fashion</span>
-          </label>
-          <label class="tag-option">
-            <input type="checkbox" value="tech" />
-            <span>Tech</span>
-          </label>
-          <label class="tag-option">
-            <input type="checkbox" value="home" />
-            <span>Home</span>
-          </label>
-          <label class="tag-option">
-            <input type="checkbox" value="beauty" />
-            <span>Beauty</span>
-          </label>
-          <label class="tag-option">
-            <input type="checkbox" value="fitness" />
-            <span>Fitness</span>
-          </label>
-          <label class="tag-option">
-            <input type="checkbox" value="food" />
-            <span>Food</span>
-          </label>
-        </div>
+      <div class="add-link-section">
+        <form id="add-link-form">
+          <input 
+            id="link-url" 
+            name="url" 
+            placeholder="Paste a product URL here..." 
+            type="url"
+            required 
+          />
+          <button type="submit" class="btn-primary">
+            ➕ Add Link
+          </button>
+        </form>
       </div>
       
-      <button type="submit">Create Collection</button>
-    </form>
+      <div class="collection-details" id="collection-details" style="display: none;">
+        <h2>Collection Details</h2>
+        <input 
+          id="title" 
+          name="title" 
+          placeholder="Collection title" 
+          value={quickTitle}
+          required 
+        />
+        
+        <textarea 
+          id="description" 
+          name="description" 
+          placeholder="What's this collection about?"
+        ></textarea>
+        
+        <!-- Tag selection -->
+        <div class="tag-selection">
+          <label>Tags (optional):</label>
+          <div class="tag-options">
+            <label class="tag-option">
+              <input type="checkbox" value="fashion" />
+              <span>Fashion</span>
+            </label>
+            <label class="tag-option">
+              <input type="checkbox" value="tech" />
+              <span>Tech</span>
+            </label>
+            <label class="tag-option">
+              <input type="checkbox" value="home" />
+              <span>Home</span>
+            </label>
+            <label class="tag-option">
+              <input type="checkbox" value="beauty" />
+              <span>Beauty</span>
+            </label>
+            <label class="tag-option">
+              <input type="checkbox" value="fitness" />
+              <span>Fitness</span>
+            </label>
+            <label class="tag-option">
+              <input type="checkbox" value="food" />
+              <span>Food</span>
+            </label>
+          </div>
+        </div>
+        
+        <button type="button" id="create-collection-btn" class="btn-primary">
+          🚀 Create Collection
+        </button>
+      </div>
+    </div>
   </main>
 
   <script>
     import { anonymousSession } from '../lib/anonymous.js';
     
-    document.getElementById('create-form').addEventListener('submit', async (e) => {
+    let firstItem = null;
+    
+    // Handle "Add Link" form submission
+    document.getElementById('add-link-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       
+      const url = document.getElementById('link-url').value;
+      
+      // For now, create a simple item (we'll enhance this later)
+      firstItem = {
+        url: url,
+        title: 'Product from link',
+        description: 'Product from link'
+      };
+      
+      // Show collection details form
+      document.getElementById('collection-details').style.display = 'block';
+      document.getElementById('add-link-form').style.display = 'none';
+      
+      // Focus on title input
+      document.getElementById('title').focus();
+    });
+    
+    // Handle "Create Collection" button
+    document.getElementById('create-collection-btn').addEventListener('click', async () => {
       const title = document.getElementById('title').value;
       const description = document.getElementById('description').value;
+      
+      if (!title.trim()) {
+        alert('Please enter a collection title');
+        return;
+      }
       
       // Get selected tags
       const selectedTags = [];
@@ -88,7 +126,7 @@ const quickTitle = Astro.url.searchParams.get('quick') || '';
         .replace(/\s+/g, '-')
         .replace(/[^a-z0-9-]/g, '');
       
-      // Create anonymous collection
+      // Create anonymous collection with the first item
       const collection = {
         id: 'anon_' + Date.now(),
         title: title,
@@ -97,7 +135,7 @@ const quickTitle = Astro.url.searchParams.get('quick') || '';
         tags: selectedTags,
         is_anonymous: true,
         anon_session_id: anonymousSession.getSessionId(),
-        items: [],
+        items: firstItem ? [firstItem] : [],
         view_count: 0,
         created_at: new Date().toISOString()
       };
@@ -105,13 +143,57 @@ const quickTitle = Astro.url.searchParams.get('quick') || '';
       // Save to localStorage
       anonymousSession.saveAnonymousCollection(collection);
       
-      // Redirect to the edit page to add items
+      // Redirect to the edit page to add more items
       window.location.href = `/edit/${slug}`;
     });
   </script>
 </Layout>
 
 <style>
+  .create-flow {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  
+  .subtitle {
+    text-align: center;
+    color: var(--color-text-secondary);
+    margin-bottom: 32px;
+  }
+  
+  .add-link-section {
+    background: var(--color-background-secondary);
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 32px;
+    margin-bottom: 24px;
+  }
+  
+  .add-link-section form {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+  }
+  
+  .add-link-section input {
+    flex: 1;
+  }
+  
+  .add-link-section button {
+    min-width: 120px;
+  }
+  
+  .collection-details {
+    background: var(--color-background-secondary);
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 32px;
+  }
+  
+  .collection-details h2 {
+    margin-bottom: 20px;
+  }
+  
   .tag-selection {
     margin-bottom: 20px;
   }
