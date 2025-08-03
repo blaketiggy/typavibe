@@ -191,35 +191,67 @@ import Layout from '../layouts/Layout.astro';
         
         // First, ensure the user profile exists
         try {
+          console.log('Checking if profile exists for user:', currentUser.id);
           const { data: existingProfile, error: profileCheckError } = await supabase
             .from('profiles')
-            .select('id')
+            .select('id, username')
             .eq('id', currentUser.id)
             .single();
+          
+          console.log('Profile check result:', { existingProfile, profileCheckError });
           
           if (!existingProfile && !profileCheckError) {
             // Profile doesn't exist, create it
             console.log('Creating user profile...');
-            const { error: profileCreateError } = await supabase
+            const fallbackUsername = `user_${currentUser.id.substring(0, 8)}`;
+            console.log('Using fallback username:', fallbackUsername);
+            
+            const { data: newProfile, error: profileCreateError } = await supabase
               .from('profiles')
               .insert({
                 id: currentUser.id,
-                username: currentUser.username || `user_${currentUser.id.substring(0, 8)}`,
+                username: currentUser.username || fallbackUsername,
                 display_name: currentUser.username || `User ${currentUser.id.substring(0, 8)}`,
                 created_at: new Date().toISOString()
-              });
+              })
+              .select()
+              .single();
+            
+            console.log('Profile creation result:', { newProfile, profileCreateError });
             
             if (profileCreateError) {
               console.error('Error creating profile:', profileCreateError);
-              throw new Error('Failed to create user profile');
+              throw new Error(`Failed to create user profile: ${profileCreateError.message}`);
             }
+            
+            // Update currentUser with the new profile info
+            if (newProfile) {
+              currentUser.username = newProfile.username;
+              console.log('Updated currentUser.username to:', currentUser.username);
+            }
+          } else if (existingProfile) {
+            console.log('Profile already exists:', existingProfile);
+            // Update currentUser with existing profile info
+            currentUser.username = existingProfile.username;
+            console.log('Updated currentUser.username to:', currentUser.username);
           }
         } catch (profileError) {
           console.error('Profile check/create error:', profileError);
-          // Continue anyway, the collection insert will fail if needed
+          throw new Error(`Profile setup failed: ${profileError.message}`);
         }
         
         // Now create the collection
+        console.log('Creating collection with user_id:', currentUser.id);
+        console.log('Collection data:', {
+          user_id: currentUser.id,
+          title: title,
+          description: description,
+          slug: slug,
+          tags: selectedTags,
+          is_public: true,
+          is_anonymous: false
+        });
+        
         const { data: collection, error } = await supabase
           .from('collections')
           .insert({
@@ -234,7 +266,10 @@ import Layout from '../layouts/Layout.astro';
           .select()
           .single();
         
+        console.log('Collection creation result:', { collection, error });
+        
         if (error) {
+          console.error('Collection creation error details:', error);
           throw error;
         }
         
