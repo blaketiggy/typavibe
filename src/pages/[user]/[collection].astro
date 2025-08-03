@@ -68,24 +68,31 @@ const title = `Sample Collection by Demo User`;
     // Try to load from database first (for authenticated users)
     if (userSlug !== 'anonymous' && userSlug !== 'demo') {
       try {
+        // First get the collection
         const { data: collection, error } = await supabase
           .from('collections')
-          .select(`
-            *,
-            profiles!collections_user_id_fkey(username, display_name),
-            collection_items(*)
-          `)
+          .select('*')
           .eq('slug', collectionSlug)
           .single();
         
         if (collection && !error) {
-          currentCollection = collection;
-          collectionOwner = collection.profiles;
-          console.log('Found collection in database:', collection);
+          // Then get the user profile separately
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('username, display_name')
+            .eq('id', collection.user_id)
+            .single();
           
-          // Update page content
-          updateCollectionDisplay(collection);
-          return;
+          if (profile && !profileError) {
+            currentCollection = collection;
+            collectionOwner = profile;
+            console.log('Found collection in database:', collection);
+            console.log('Collection owner:', profile);
+            
+            // Update page content
+            updateCollectionDisplay(collection);
+            return;
+          }
         }
       } catch (error) {
         console.error('Error loading from database:', error);
