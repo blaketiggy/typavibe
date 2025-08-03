@@ -15,7 +15,6 @@ import Layout from '../layouts/Layout.astro';
           id="title" 
           name="title" 
           placeholder="Collection title" 
-          value={quickTitle}
           required 
         />
         
@@ -70,6 +69,23 @@ import Layout from '../layouts/Layout.astro';
   
   let currentUser = null;
   let authChecked = false;
+  
+  // Initialize page
+  function initializePage() {
+    console.log('Initializing create page...');
+    
+    // Get quick title from URL params
+    const urlParams = new URLSearchParams(window.location.search);
+    const quickTitle = urlParams.get('title') || urlParams.get('quick') || '';
+    
+    if (quickTitle) {
+      console.log('Setting quick title:', quickTitle);
+      document.getElementById('title').value = quickTitle;
+    }
+    
+    // Initialize auth check
+    checkAuth();
+  }
   
   // Check if user is authenticated
   async function checkAuth() {
@@ -137,18 +153,6 @@ import Layout from '../layouts/Layout.astro';
       statusDiv.style.color = '#2563eb';
       statusDiv.style.border = '1px solid #bfdbfe';
     }
-  }
-  
-  // Get quick title from URL params
-  function getQuickTitle() {
-    const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get('title') || '';
-  }
-  
-  // Set quick title if provided
-  const quickTitle = getQuickTitle();
-  if (quickTitle) {
-    document.getElementById('title').value = quickTitle;
   }
   
   document.getElementById('create-form').addEventListener('submit', async (e) => {
@@ -241,8 +245,8 @@ import Layout from '../layouts/Layout.astro';
     }
   });
   
-  // Initialize auth check
-  checkAuth();
+  // Initialize page
+  initializePage();
 </script>
 
 <style>
