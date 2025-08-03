@@ -1,0 +1,218 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Test Auth - TypaVibe">
+  <main>
+    <div class="test-container">
+      <h1>🔧 Authentication Test</h1>
+      
+      <div class="test-section">
+        <h2>Environment Variables</h2>
+        <div id="env-status">Checking...</div>
+      </div>
+      
+      <div class="test-section">
+        <h2>Supabase Connection</h2>
+        <div id="connection-status">Testing...</div>
+      </div>
+      
+      <div class="test-section">
+        <h2>Authentication Test</h2>
+        <button onclick="testAuth()" class="btn-primary">Test Magic Link</button>
+        <div id="auth-status"></div>
+      </div>
+      
+      <div class="test-section">
+        <h2>Database Test</h2>
+        <button onclick="testDatabase()" class="btn-secondary">Test Database</button>
+        <div id="database-status"></div>
+      </div>
+    </div>
+  </main>
+</Layout>
+
+<script>
+  import { supabase } from '../lib/supabase.js';
+  
+  // Test environment variables
+  function checkEnvironment() {
+    const url = import.meta.env.PUBLIC_SUPABASE_URL;
+    const key = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+    
+    const statusDiv = document.getElementById('env-status');
+    
+    if (url && key) {
+      statusDiv.innerHTML = `
+        <div style="color: #10b981; margin-bottom: 8px;">✅ Environment variables found</div>
+        <div style="font-size: 12px; color: var(--color-text-secondary);">
+          URL: ${url.substring(0, 30)}...<br>
+          Key: ${key.substring(0, 20)}...
+        </div>
+      `;
+    } else {
+      statusDiv.innerHTML = `
+        <div style="color: #dc2626; margin-bottom: 8px;">❌ Environment variables missing</div>
+        <div style="font-size: 12px; color: var(--color-text-secondary);">
+          Make sure you have a .env file with:<br>
+          PUBLIC_SUPABASE_URL=your_url<br>
+          PUBLIC_SUPABASE_ANON_KEY=your_key
+        </div>
+      `;
+    }
+  }
+  
+  // Test Supabase connection
+  async function testConnection() {
+    const statusDiv = document.getElementById('connection-status');
+    
+    try {
+      // Simple query to test connection
+      const { data, error } = await supabase
+        .from('collections')
+        .select('count')
+        .limit(1);
+      
+      if (error) {
+        throw error;
+      }
+      
+      statusDiv.innerHTML = `
+        <div style="color: #10b981; margin-bottom: 8px;">✅ Supabase connection successful</div>
+        <div style="font-size: 12px; color: var(--color-text-secondary);">
+          Database is accessible
+        </div>
+      `;
+      
+    } catch (error) {
+      console.error('Connection error:', error);
+      statusDiv.innerHTML = `
+        <div style="color: #dc2626; margin-bottom: 8px;">❌ Connection failed</div>
+        <div style="font-size: 12px; color: var(--color-text-secondary);">
+          Error: ${error.message}<br>
+          Make sure your database schema is set up
+        </div>
+      `;
+    }
+  }
+  
+  // Test authentication
+  async function testAuth() {
+    const statusDiv = document.getElementById('auth-status');
+    const testEmail = 'test@example.com';
+    
+    try {
+      statusDiv.innerHTML = '<div style="color: #f59e0b;">🔄 Testing...</div>';
+      
+      const { error } = await supabase.auth.signInWithOtp({
+        email: testEmail,
+        options: {
+          emailRedirectTo: `${window.location.origin}/dashboard`
+        }
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      statusDiv.innerHTML = `
+        <div style="color: #10b981; margin-bottom: 8px;">✅ Authentication test successful</div>
+        <div style="font-size: 12px; color: var(--color-text-secondary);">
+          Magic link sent to ${testEmail}<br>
+          Check your Supabase dashboard for the email
+        </div>
+      `;
+      
+    } catch (error) {
+      console.error('Auth test error:', error);
+      statusDiv.innerHTML = `
+        <div style="color: #dc2626; margin-bottom: 8px;">❌ Authentication test failed</div>
+        <div style="font-size: 12px; color: var(--color-text-secondary);">
+          Error: ${error.message}
+        </div>
+      `;
+    }
+  }
+  
+  // Test database operations
+  async function testDatabase() {
+    const statusDiv = document.getElementById('database-status');
+    
+    try {
+      statusDiv.innerHTML = '<div style="color: #f59e0b;">🔄 Testing database...</div>';
+      
+      // Test inserting a collection
+      const { data, error } = await supabase
+        .from('collections')
+        .insert({
+          title: 'Test Collection',
+          description: 'This is a test collection',
+          slug: 'test-collection-' + Date.now(),
+          is_public: true,
+          is_anonymous: true,
+          anon_session_id: 'test-session'
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Clean up - delete the test collection
+      await supabase
+        .from('collections')
+        .delete()
+        .eq('id', data.id);
+      
+      statusDiv.innerHTML = `
+        <div style="color: #10b981; margin-bottom: 8px;">✅ Database operations successful</div>
+        <div style="font-size: 12px; color: var(--color-text-secondary);">
+          Can create and delete collections
+        </div>
+      `;
+      
+    } catch (error) {
+      console.error('Database test error:', error);
+      statusDiv.innerHTML = `
+        <div style="color: #dc2626; margin-bottom: 8px;">❌ Database test failed</div>
+        <div style="font-size: 12px; color: var(--color-text-secondary);">
+          Error: ${error.message}<br>
+          Make sure you've run the database schema
+        </div>
+      `;
+    }
+  }
+  
+  // Make functions globally accessible
+  window.testAuth = testAuth;
+  window.testDatabase = testDatabase;
+  
+  // Run initial tests
+  checkEnvironment();
+  testConnection();
+</script>
+
+<style>
+  .test-container {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  
+  .test-section {
+    background: var(--color-background-secondary);
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  
+  .test-section h2 {
+    margin-bottom: 16px;
+    font-size: 1.1rem;
+  }
+  
+  .test-section button {
+    margin-bottom: 12px;
+  }
+</style> 
