@@ -290,6 +290,8 @@ import Layout from '../layouts/Layout.astro';
         
         // Now create the collection
         console.log('Creating collection with user_id:', currentUser.id);
+        console.log('User ID type:', typeof currentUser.id);
+        console.log('User ID length:', currentUser.id.length);
         console.log('Collection data:', {
           user_id: currentUser.id,
           title: title,
@@ -299,6 +301,19 @@ import Layout from '../layouts/Layout.astro';
           is_public: true,
           is_anonymous: false
         });
+        
+        // First, let's verify the user exists in the profiles table
+        const { data: profileCheck, error: profileCheckError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', currentUser.id)
+          .single();
+        
+        console.log('Profile check before collection creation:', { profileCheck, profileCheckError });
+        
+        if (!profileCheck) {
+          throw new Error(`User profile not found in database. User ID: ${currentUser.id}`);
+        }
         
         const { data: collection, error } = await supabase
           .from('collections')
