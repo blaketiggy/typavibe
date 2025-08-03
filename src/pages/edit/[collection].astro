@@ -27,7 +27,7 @@ const { collection } = Astro.params;
       </form>
     </section>
     
-    <section class="edit-section">
+    <section class="edit-section" id="add-item-section">
       <h2>Add Items</h2>
       <form id="add-item-form">
         <input 
@@ -67,8 +67,8 @@ const { collection } = Astro.params;
     </section>
     
     <div style="margin-top: 48px; text-align: center;">
-      <button onclick="window.location.href='/demo/' + window.location.pathname.split('/').pop()" class="btn-primary">
-        View Collection
+      <button onclick="publishCollection()" class="btn-primary">
+        🚀 Publish & Share
       </button>
       <button onclick="window.location.href='/'" class="btn-secondary" style="margin-left: 12px;">
         Back to Home
@@ -126,8 +126,24 @@ const { collection } = Astro.params;
       // Add drag and drop event listeners
       setupDragAndDrop();
     } else {
-      itemsContainer.innerHTML = '<p>No items in this collection yet. Add your first item above!</p>';
+      itemsContainer.innerHTML = `
+        <div style="text-align: center; padding: 48px; color: var(--color-text-secondary);">
+          <p>No items in this collection yet.</p>
+          <button onclick="scrollToAddItem()" class="btn-primary">Add Your First Item</button>
+        </div>
+      `;
     }
+  }
+  
+  function scrollToAddItem() {
+    document.getElementById('add-item-section').scrollIntoView({ 
+      behavior: 'smooth',
+      block: 'start'
+    });
+    // Focus on the first input
+    setTimeout(() => {
+      document.getElementById('item-url').focus();
+    }, 500);
   }
   
   function setupDragAndDrop() {
@@ -192,6 +208,11 @@ const { collection } = Astro.params;
       });
       loadItems();
     }
+  }
+  
+  function publishCollection() {
+    const { collection } = Astro.params;
+    window.location.href = `/demo/${collection}`;
   }
   
   // Handle collection edit form
