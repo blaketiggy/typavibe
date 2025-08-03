@@ -139,6 +139,7 @@ const { collection } = Astro.params;
     const itemsContainer = document.getElementById('items-list');
     console.log('Items container:', itemsContainer);
     console.log('Current collection:', currentCollection);
+    console.log('Current collection items:', currentCollection?.items);
     
     if (currentCollection.items && currentCollection.items.length > 0) {
       console.log('Items found:', currentCollection.items);
@@ -154,6 +155,7 @@ const { collection } = Astro.params;
           </button>
         </div>
       `).join('');
+      console.log('Items HTML generated and set');
     } else {
       console.log('No items found');
       itemsContainer.innerHTML = '<p style="text-align: center; color: var(--color-text-secondary);">No items yet. Add your first item above!</p>';
@@ -187,7 +189,13 @@ const { collection } = Astro.params;
   function cancelAddItem() {
     document.getElementById('add-item-btn').style.display = 'inline-flex';
     document.getElementById('add-item-form').style.display = 'none';
-    document.getElementById('add-item-form').reset();
+    
+    // Manually clear all input fields
+    document.getElementById('item-url').value = '';
+    document.getElementById('item-title').value = '';
+    document.getElementById('item-notes').value = '';
+    document.getElementById('item-price').value = '';
+    
     currentStep = 'url';
     showStep('url');
   }
@@ -223,6 +231,8 @@ const { collection } = Astro.params;
     const description = document.getElementById('item-notes').value;
     const price = document.getElementById('item-price').value;
     
+    console.log('Adding item:', { url, title, description, price });
+    
     const newItem = {
       url: url,
       title: title,
@@ -235,6 +245,7 @@ const { collection } = Astro.params;
     }
     
     currentCollection.items.push(newItem);
+    console.log('Updated collection items:', currentCollection.items);
     
     anonymousSession.updateCollection(currentCollection.slug, {
       items: currentCollection.items
@@ -242,6 +253,7 @@ const { collection } = Astro.params;
     
     // Reset form and hide
     cancelAddItem();
+    console.log('Calling loadItems...');
     loadItems();
   }
   
