@@ -36,9 +36,15 @@ import Layout from '../../layouts/Layout.astro';
       const user = data.session.user;
       const username = user.user_metadata?.username;
       
+      console.log('Auth callback - User:', user);
+      console.log('Auth callback - User metadata:', user.user_metadata);
+      console.log('Auth callback - Username from metadata:', username);
+      
       if (username) {
         // This is a new user with a username - create their profile
         statusDiv.innerHTML = '<div style="color: #f59e0b;">🔄 Setting up your profile...</div>';
+        
+        console.log('Creating profile for new user with username:', username);
         
         const { error: profileError } = await supabase
           .from('profiles')
@@ -52,6 +58,8 @@ import Layout from '../../layouts/Layout.astro';
         if (profileError) {
           console.error('Profile creation error:', profileError);
           // Profile might already exist, continue anyway
+        } else {
+          console.log('Profile created successfully for username:', username);
         }
         
         statusDiv.innerHTML = `
@@ -67,6 +75,8 @@ import Layout from '../../layouts/Layout.astro';
       } else {
         // This is an existing user signing in
         // Check if they have a profile, create one if they don't
+        console.log('Existing user signing in, checking for profile...');
+        
         try {
           const { data: existingProfile, error: profileCheckError } = await supabase
             .from('profiles')
@@ -74,20 +84,26 @@ import Layout from '../../layouts/Layout.astro';
             .eq('id', user.id)
             .single();
           
+          console.log('Profile check result:', { existingProfile, profileCheckError });
+          
           if (!existingProfile && !profileCheckError) {
             // No profile exists, create one with a default username
             console.log('Creating profile for existing user...');
+            const fallbackUsername = `user_${user.id.substring(0, 8)}`;
+            
             const { error: profileCreateError } = await supabase
               .from('profiles')
               .insert({
                 id: user.id,
-                username: `user_${user.id.substring(0, 8)}`,
+                username: fallbackUsername,
                 display_name: `User ${user.id.substring(0, 8)}`,
                 created_at: new Date().toISOString()
               });
             
             if (profileCreateError) {
               console.error('Error creating profile for existing user:', profileCreateError);
+            } else {
+              console.log('Profile created successfully for existing user:', fallbackUsername);
             }
           }
         } catch (profileError) {
