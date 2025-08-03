@@ -8,6 +8,8 @@ import Layout from '../layouts/Layout.astro';
       <h1>Create Your Collection</h1>
       <p class="subtitle">Start by naming your collection</p>
       
+      <div id="auth-status" style="display: none; margin-bottom: 20px; padding: 12px; border-radius: 6px;"></div>
+      
       <form id="create-form">
         <input 
           id="title" 
@@ -54,7 +56,7 @@ import Layout from '../layouts/Layout.astro';
           </div>
         </div>
         
-        <button type="submit" class="btn-primary">
+        <button type="submit" class="btn-primary" id="submit-btn">
           Create Collection
         </button>
       </form>
@@ -67,11 +69,56 @@ import Layout from '../layouts/Layout.astro';
   import { anonymousSession } from '../lib/anonymous.js';
   
   let currentUser = null;
+  let authChecked = false;
   
   // Check if user is authenticated
   async function checkAuth() {
-    const { data: { user } } = await supabase.auth.getUser();
-    currentUser = user;
+    try {
+      console.log('Checking authentication...');
+      const { data: { user }, error } = await supabase.auth.getUser();
+      
+      if (error) {
+        console.error('Auth error:', error);
+        showAuthStatus('❌ Authentication error. Please sign in again.', 'error');
+        return;
+      }
+      
+      currentUser = user;
+      authChecked = true;
+      
+      if (user) {
+        console.log('User authenticated:', user.email);
+        showAuthStatus(`✅ Signed in as ${user.email}`, 'success');
+      } else {
+        console.log('No user authenticated');
+        showAuthStatus('ℹ️ Creating anonymous collection', 'info');
+      }
+      
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      showAuthStatus('❌ Authentication check failed', 'error');
+    }
+  }
+  
+  function showAuthStatus(message, type) {
+    const statusDiv = document.getElementById('auth-status');
+    statusDiv.textContent = message;
+    statusDiv.style.display = 'block';
+    
+    // Set color based on type
+    if (type === 'error') {
+      statusDiv.style.background = '#fef2f2';
+      statusDiv.style.color = '#dc2626';
+      statusDiv.style.border = '1px solid #fecaca';
+    } else if (type === 'success') {
+      statusDiv.style.background = '#f0fdf4';
+      statusDiv.style.color = '#16a34a';
+      statusDiv.style.border = '1px solid #bbf7d0';
+    } else {
+      statusDiv.style.background = '#f0f9ff';
+      statusDiv.style.color = '#2563eb';
+      statusDiv.style.border = '1px solid #bfdbfe';
+    }
   }
   
   // Get quick title from URL params
@@ -89,6 +136,12 @@ import Layout from '../layouts/Layout.astro';
   document.getElementById('create-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     
+    // Wait for auth check to complete
+    if (!authChecked) {
+      console.log('Waiting for auth check...');
+      await checkAuth();
+    }
+    
     const title = document.getElementById('title').value;
     const description = document.getElementById('description').value;
     
@@ -103,7 +156,15 @@ import Layout from '../layouts/Layout.astro';
       .replace(/\s+/g, '-')
       .replace(/[^a-z0-9-]/g, '');
     
+    const submitBtn = document.getElementById('submit-btn');
+    const originalText = submitBtn.textContent;
+    
     try {
+      submitBtn.textContent = 'Creating...';
+      submitBtn.disabled = true;
+      
+      console.log('Creating collection with user:', currentUser?.email || 'anonymous');
+      
       if (currentUser) {
         // Save to database for authenticated user
         const { data: collection, error } = await supabase
@@ -123,6 +184,8 @@ import Layout from '../layouts/Layout.astro';
         if (error) {
           throw error;
         }
+        
+        console.log('Collection created in database:', collection);
         
         // Redirect to edit page
         window.location.href = `/edit/${slug}`;
@@ -145,13 +208,18 @@ import Layout from '../layouts/Layout.astro';
         // Save to localStorage
         anonymousSession.saveAnonymousCollection(collection);
         
+        console.log('Collection saved to localStorage:', collection);
+        
         // Redirect to the edit page
         window.location.href = `/edit/${slug}`;
       }
       
     } catch (error) {
       console.error('Error creating collection:', error);
-      alert('Error creating collection. Please try again.');
+      showAuthStatus(`❌ Error creating collection: ${error.message}`, 'error');
+    } finally {
+      submitBtn.textContent = originalText;
+      submitBtn.disabled = false;
     }
   });
   
