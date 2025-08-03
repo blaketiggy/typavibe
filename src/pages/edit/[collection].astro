@@ -126,6 +126,9 @@ const { collection } = Astro.params;
     window.location.href = `/demo/${collection}`;
   }
   
+  // Make publishCollection globally accessible
+  window.publishCollection = publishCollection;
+  
   // Handle add item form
   document.getElementById('add-item-form').addEventListener('submit', (e) => {
     e.preventDefault();
