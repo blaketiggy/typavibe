@@ -1,7 +1,5 @@
 ---
 import Layout from '../layouts/Layout.astro';
-
-const quickTitle = Astro.url.searchParams.get('quick') || '';
 ---
 
 <Layout title="Create Collection - TypaVibe">
@@ -62,49 +60,104 @@ const quickTitle = Astro.url.searchParams.get('quick') || '';
       </form>
     </div>
   </main>
-
-  <script>
-    import { anonymousSession } from '../lib/anonymous.js';
-    
-    document.getElementById('create-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      
-      const title = document.getElementById('title').value;
-      const description = document.getElementById('description').value;
-      
-      // Get selected tags
-      const selectedTags = [];
-      document.querySelectorAll('.tag-option input:checked').forEach(checkbox => {
-        selectedTags.push(checkbox.value);
-      });
-      
-      // Create slug from title
-      const slug = title.toLowerCase()
-        .replace(/\s+/g, '-')
-        .replace(/[^a-z0-9-]/g, '');
-      
-      // Create anonymous collection
-      const collection = {
-        id: 'anon_' + Date.now(),
-        title: title,
-        description: description,
-        slug: slug,
-        tags: selectedTags,
-        is_anonymous: true,
-        anon_session_id: anonymousSession.getSessionId(),
-        items: [],
-        view_count: 0,
-        created_at: new Date().toISOString()
-      };
-      
-      // Save to localStorage
-      anonymousSession.saveAnonymousCollection(collection);
-      
-      // Redirect to the edit page
-      window.location.href = `/edit/${slug}`;
-    });
-  </script>
 </Layout>
+
+<script>
+  import { supabase } from '../lib/supabase.js';
+  import { anonymousSession } from '../lib/anonymous.js';
+  
+  let currentUser = null;
+  
+  // Check if user is authenticated
+  async function checkAuth() {
+    const { data: { user } } = await supabase.auth.getUser();
+    currentUser = user;
+  }
+  
+  // Get quick title from URL params
+  function getQuickTitle() {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('title') || '';
+  }
+  
+  // Set quick title if provided
+  const quickTitle = getQuickTitle();
+  if (quickTitle) {
+    document.getElementById('title').value = quickTitle;
+  }
+  
+  document.getElementById('create-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const title = document.getElementById('title').value;
+    const description = document.getElementById('description').value;
+    
+    // Get selected tags
+    const selectedTags = [];
+    document.querySelectorAll('.tag-option input:checked').forEach(checkbox => {
+      selectedTags.push(checkbox.value);
+    });
+    
+    // Create slug from title
+    const slug = title.toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '');
+    
+    try {
+      if (currentUser) {
+        // Save to database for authenticated user
+        const { data: collection, error } = await supabase
+          .from('collections')
+          .insert({
+            user_id: currentUser.id,
+            title: title,
+            description: description,
+            slug: slug,
+            tags: selectedTags,
+            is_public: true,
+            is_anonymous: false
+          })
+          .select()
+          .single();
+        
+        if (error) {
+          throw error;
+        }
+        
+        // Redirect to edit page
+        window.location.href = `/edit/${slug}`;
+        
+      } else {
+        // Save to localStorage for anonymous user
+        const collection = {
+          id: 'anon_' + Date.now(),
+          title: title,
+          description: description,
+          slug: slug,
+          tags: selectedTags,
+          is_anonymous: true,
+          anon_session_id: anonymousSession.getSessionId(),
+          items: [],
+          view_count: 0,
+          created_at: new Date().toISOString()
+        };
+        
+        // Save to localStorage
+        anonymousSession.saveAnonymousCollection(collection);
+        
+        // Redirect to the edit page
+        window.location.href = `/edit/${slug}`;
+      }
+      
+    } catch (error) {
+      console.error('Error creating collection:', error);
+      alert('Error creating collection. Please try again.');
+    }
+  });
+  
+  // Initialize auth check
+  checkAuth();
+</script>
 
 <style>
   .create-flow {

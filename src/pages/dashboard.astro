@@ -4,40 +4,357 @@ import Layout from '../layouts/Layout.astro';
 
 <Layout title="Dashboard - TypaVibe">
   <main>
-    <header>
-      <h1>Your Collections</h1>
-      <a href="/create" class="btn-primary">Create New Collection</a>
+    <header class="dashboard-header">
+      <div class="user-info">
+        <h1>My Collections</h1>
+        <p id="user-email">Loading...</p>
+      </div>
+      <button onclick="signOut()" class="btn-secondary">
+        Sign Out
+      </button>
     </header>
     
-    <section class="collections-grid">
-      <article class="collection-card">
-        <h3>
-          <a href="/demo/fall-mood">
-            Fall Mood
-          </a>
-        </h3>
-        <p>Cozy autumn vibes and seasonal essentials.</p>
-        <small>
-          Created 2 days ago • 15 views
-        </small>
-      </article>
-      
-      <article class="collection-card">
-        <h3>
-          <a href="/demo/cozy-night">
-            Cozy Night In
-          </a>
-        </h3>
-        <p>Perfect items for a relaxing evening at home.</p>
-        <small>
-          Created 1 week ago • 8 views
-        </small>
-      </article>
-    </section>
+    <div class="dashboard-actions">
+      <button onclick="window.location.href='/create'" class="btn-primary">
+        ➕ Create New Collection
+      </button>
+      <button onclick="window.location.href='/explore'" class="btn-secondary">
+        🔍 Explore Collections
+      </button>
+    </div>
     
-    <div style="margin-top: 48px; text-align: center;">
-      <p>More features coming soon!</p>
-      <button onclick="window.location.href='/'" class="btn-secondary">Back to Home</button>
+    <div class="collections-section">
+      <h2>Your Collections</h2>
+      <div id="collections-list" class="collections-grid">
+        <div class="loading">Loading your collections...</div>
+      </div>
+    </div>
+    
+    <div class="anonymous-section" id="anonymous-section" style="display: none;">
+      <h2>Anonymous Collections</h2>
+      <p>Collections created without signing in</p>
+      <div id="anonymous-collections" class="collections-grid">
+        <!-- Anonymous collections will be loaded here -->
+      </div>
     </div>
   </main>
-</Layout> 
+</Layout>
+
+<script>
+  import { supabase } from '../lib/supabase.js';
+  import { anonymousSession } from '../lib/anonymous.js';
+  
+  let currentUser = null;
+  
+  // Check authentication status
+  async function checkAuth() {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    
+    if (error) {
+      console.error('Auth error:', error);
+      window.location.href = '/auth';
+      return;
+    }
+    
+    if (!user) {
+      window.location.href = '/auth';
+      return;
+    }
+    
+    currentUser = user;
+    document.getElementById('user-email').textContent = user.email;
+    
+    // Load user's collections
+    await loadUserCollections();
+    
+    // Load anonymous collections
+    await loadAnonymousCollections();
+  }
+  
+  // Load user's collections from database
+  async function loadUserCollections() {
+    try {
+      const { data: collections, error } = await supabase
+        .from('collections')
+        .select(`
+          *,
+          collection_items (*)
+        `)
+        .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        throw error;
+      }
+      
+      displayCollections(collections || [], 'collections-list');
+      
+    } catch (error) {
+      console.error('Error loading collections:', error);
+      document.getElementById('collections-list').innerHTML = 
+        '<div class="error">Error loading collections. Please try again.</div>';
+    }
+  }
+  
+  // Load anonymous collections from localStorage
+  async function loadAnonymousCollections() {
+    const anonCollections = anonymousSession.getAnonymousCollections();
+    
+    if (anonCollections.length > 0) {
+      document.getElementById('anonymous-section').style.display = 'block';
+      displayCollections(anonCollections, 'anonymous-collections');
+    }
+  }
+  
+  // Display collections in a grid
+  function displayCollections(collections, containerId) {
+    const container = document.getElementById(containerId);
+    
+    if (collections.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <p>No collections yet.</p>
+          <button onclick="window.location.href='/create'" class="btn-primary">
+            Create Your First Collection
+          </button>
+        </div>
+      `;
+      return;
+    }
+    
+    container.innerHTML = collections.map(collection => `
+      <div class="collection-card">
+        <div class="card-content">
+          <h3>${collection.title}</h3>
+          <p>${collection.description || 'No description'}</p>
+          <div class="collection-meta">
+            <span>${collection.collection_items?.length || collection.items?.length || 0} items</span>
+            <span>${collection.view_count || 0} views</span>
+          </div>
+          <div class="collection-actions">
+            <a href="/demo/${collection.slug}" class="btn-secondary">View</a>
+            <a href="/edit/${collection.slug}" class="btn-secondary">Edit</a>
+            ${collection.is_anonymous ? 
+              '<button onclick="convertToUserCollection(\'' + collection.slug + '\')" class="btn-primary">Save to Account</button>' : 
+              ''
+            }
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+  
+  // Convert anonymous collection to user collection
+  async function convertToUserCollection(slug) {
+    try {
+      const anonCollection = anonymousSession.getCollectionBySlug(slug);
+      
+      if (!anonCollection) {
+        alert('Collection not found');
+        return;
+      }
+      
+      // Insert into database
+      const { data: collection, error } = await supabase
+        .from('collections')
+        .insert({
+          user_id: currentUser.id,
+          title: anonCollection.title,
+          description: anonCollection.description,
+          slug: anonCollection.slug,
+          tags: anonCollection.tags || [],
+          is_public: true,
+          is_anonymous: false
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Insert collection items
+      if (anonCollection.items && anonCollection.items.length > 0) {
+        const items = anonCollection.items.map(item => ({
+          collection_id: collection.id,
+          url: item.url,
+          title: item.title,
+          description: item.description,
+          price: item.price,
+          notes: item.notes
+        }));
+        
+        const { error: itemsError } = await supabase
+          .from('collection_items')
+          .insert(items);
+        
+        if (itemsError) {
+          console.error('Error inserting items:', itemsError);
+        }
+      }
+      
+      // Remove from localStorage
+      anonymousSession.deleteCollection(slug);
+      
+      // Reload collections
+      await loadUserCollections();
+      await loadAnonymousCollections();
+      
+      alert('Collection saved to your account!');
+      
+    } catch (error) {
+      console.error('Error converting collection:', error);
+      alert('Error saving collection. Please try again.');
+    }
+  }
+  
+  // Sign out
+  async function signOut() {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Sign out error:', error);
+    } else {
+      window.location.href = '/';
+    }
+  }
+  
+  // Make functions globally accessible
+  window.convertToUserCollection = convertToUserCollection;
+  window.signOut = signOut;
+  
+  // Initialize dashboard
+  checkAuth();
+</script>
+
+<style>
+  .dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--color-border);
+  }
+  
+  .user-info h1 {
+    margin-bottom: 4px;
+  }
+  
+  .user-info p {
+    color: var(--color-text-secondary);
+    font-size: 14px;
+  }
+  
+  .dashboard-actions {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+  }
+  
+  .collections-section {
+    margin-bottom: 48px;
+  }
+  
+  .collections-section h2 {
+    margin-bottom: 24px;
+  }
+  
+  .collections-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 24px;
+  }
+  
+  .collection-card {
+    background: var(--color-background-secondary);
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 24px;
+    transition: all 0.2s ease;
+  }
+  
+  .collection-card:hover {
+    border-color: var(--color-border-hover);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+  }
+  
+  .card-content h3 {
+    margin-bottom: 8px;
+    color: var(--color-text);
+  }
+  
+  .card-content p {
+    color: var(--color-text-secondary);
+    margin-bottom: 16px;
+    font-size: 14px;
+  }
+  
+  .collection-meta {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: var(--color-text-secondary);
+  }
+  
+  .collection-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  
+  .collection-actions .btn-secondary {
+    padding: 6px 12px;
+    font-size: 13px;
+    min-height: auto;
+  }
+  
+  .collection-actions .btn-primary {
+    padding: 6px 12px;
+    font-size: 13px;
+    min-height: auto;
+  }
+  
+  .empty-state {
+    text-align: center;
+    padding: 48px;
+    color: var(--color-text-secondary);
+  }
+  
+  .empty-state p {
+    margin-bottom: 16px;
+  }
+  
+  .loading {
+    text-align: center;
+    padding: 48px;
+    color: var(--color-text-secondary);
+  }
+  
+  .error {
+    text-align: center;
+    padding: 24px;
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+    border-radius: var(--radius-sm);
+  }
+  
+  .anonymous-section {
+    margin-top: 48px;
+    padding-top: 32px;
+    border-top: 1px solid var(--color-border);
+  }
+  
+  .anonymous-section h2 {
+    margin-bottom: 8px;
+  }
+  
+  .anonymous-section p {
+    color: var(--color-text-secondary);
+    margin-bottom: 24px;
+    font-size: 14px;
+  }
+</style> 
