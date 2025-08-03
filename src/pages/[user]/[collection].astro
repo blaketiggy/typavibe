@@ -55,7 +55,11 @@ const title = `Sample Collection by Demo User`;
   
   // Load collection data
   async function loadCollection() {
-    const { collection } = Astro.params;
+    // Get collection slug from URL path
+    const pathParts = window.location.pathname.split('/');
+    const collection = pathParts[pathParts.length - 1];
+    
+    console.log('Collection view - slug from URL:', collection);
     
     // Try to load from anonymous collections first
     const anonCollection = anonymousSession.getCollectionBySlug(collection);
@@ -63,6 +67,7 @@ const title = `Sample Collection by Demo User`;
     if (anonCollection) {
       // This is an anonymous collection
       currentCollection = anonCollection;
+      console.log('Found collection for view:', anonCollection);
       
       // Update page title and meta tags
       document.title = `${anonCollection.title} - TypaVibe`;
@@ -187,12 +192,16 @@ const title = `Sample Collection by Demo User`;
   }
   
   function editCollection() {
-    const { collection } = Astro.params;
+    // Get collection slug from URL path
+    const pathParts = window.location.pathname.split('/');
+    const collection = pathParts[pathParts.length - 1];
     window.location.href = `/edit/${collection}`;
   }
   
   function addItem() {
-    const { collection } = Astro.params;
+    // Get collection slug from URL path
+    const pathParts = window.location.pathname.split('/');
+    const collection = pathParts[pathParts.length - 1];
     window.location.href = `/edit/${collection}#add-item`;
   }
   
