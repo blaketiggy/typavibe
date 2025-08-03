@@ -91,11 +91,30 @@ import Layout from '../layouts/Layout.astro';
   async function checkAuth() {
     try {
       console.log('Checking authentication...');
+      
+      // First check if we have a session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('Session check:', { session: !!session, error: sessionError });
+      
+      if (sessionError) {
+        console.error('Session error:', sessionError);
+        // Continue as anonymous user
+        currentUser = null;
+        authChecked = true;
+        showAuthStatus('ℹ️ Creating anonymous collection', 'info');
+        return;
+      }
+      
+      // Then get the user
       const { data: { user }, error } = await supabase.auth.getUser();
+      console.log('User check:', { user: !!user, error });
       
       if (error) {
         console.error('Auth error:', error);
-        showAuthStatus('❌ Authentication error. Please sign in again.', 'error');
+        // Don't show error, just continue as anonymous
+        currentUser = null;
+        authChecked = true;
+        showAuthStatus('ℹ️ Creating anonymous collection', 'info');
         return;
       }
       
@@ -130,7 +149,10 @@ import Layout from '../layouts/Layout.astro';
       
     } catch (error) {
       console.error('Auth check failed:', error);
-      showAuthStatus('❌ Authentication check failed', 'error');
+      // Don't show error, just continue as anonymous
+      currentUser = null;
+      authChecked = true;
+      showAuthStatus('ℹ️ Creating anonymous collection', 'info');
     }
   }
   
