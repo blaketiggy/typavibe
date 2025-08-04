@@ -42,7 +42,7 @@ import Layout from '../layouts/Layout.astro';
   
   async function loadUserCollections() {
     const grid = document.getElementById('collections-grid');
-    
+
     try {
       // Get user profile first
       const { data: profile, error: profileError } = await supabase
@@ -50,30 +50,34 @@ import Layout from '../layouts/Layout.astro';
         .select('id, username, display_name')
         .eq('username', username)
         .single();
-      
+
+      console.log('Profile lookup result:', { profile, profileError });
+
       if (profileError || !profile) {
         grid.innerHTML = `
           <div class="error-state">
             <div class="error-icon">👤</div>
             <h3>User Not Found</h3>
-            <p>The user @${username} doesn't exist.</p>
+            <p>The user @${username} doesn't exist or hasn't created a profile yet.</p>
             <a href="/" class="btn-primary">Go Home</a>
           </div>
         `;
         return;
       }
-      
+
       // Get collections for this user
       const { data: collections, error: collectionsError } = await supabase
         .from('collections')
         .select('*')
         .eq('user_id', profile.id)
         .order('created_at', { ascending: false });
-      
+
+      console.log('Collections lookup result:', { collections, collectionsError });
+
       if (collectionsError) {
         throw collectionsError;
       }
-      
+
       if (!collections || collections.length === 0) {
         grid.innerHTML = `
           <div class="empty-state">
@@ -84,7 +88,7 @@ import Layout from '../layouts/Layout.astro';
         `;
         return;
       }
-      
+
       grid.innerHTML = collections.map(collection => `
         <div class="collection-card">
           <div class="card-content">
@@ -92,7 +96,7 @@ import Layout from '../layouts/Layout.astro';
             ${collection.description ? `<p class="collection-description">${collection.description}</p>` : ''}
             <div class="collection-meta">
               <span class="collection-date">${new Date(collection.created_at).toLocaleDateString()}</span>
-              ${collection.tags && collection.tags.length > 0 ? 
+              ${collection.tags && collection.tags.length > 0 ?
                 `<div class="collection-tags">
                   ${collection.tags.slice(0, 3).map(tag => `<span class="tag">${tag}</span>`).join('')}
                   ${collection.tags.length > 3 ? `<span class="tag-more">+${collection.tags.length - 3}</span>` : ''}
@@ -106,7 +110,7 @@ import Layout from '../layouts/Layout.astro';
           </div>
         </div>
       `).join('');
-      
+
     } catch (error) {
       console.error('Error loading user collections:', error);
       grid.innerHTML = `
@@ -114,6 +118,7 @@ import Layout from '../layouts/Layout.astro';
           <div class="error-icon">⚠️</div>
           <h3>Error Loading Collections</h3>
           <p>There was an error loading the collections. Please try again.</p>
+          <p style="font-size: 12px; color: var(--color-text-secondary);">Error: ${error.message}</p>
         </div>
       `;
     }
