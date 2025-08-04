@@ -211,31 +211,87 @@ const { user, collection } = Astro.params;
     }
   }
   
-  function loadItems() {
+  async function loadItems() {
     const itemsContainer = document.getElementById('items-list');
-    const items = currentCollection?.items || currentCollection?.collection_items || [];
     
-    if (items.length === 0) {
-      itemsContainer.innerHTML = `
-        <p style="text-align: center; color: var(--color-text-secondary);">
-          No items yet. Add your first item above!
-        </p>
-      `;
-      return;
-    }
-    
-    itemsContainer.innerHTML = items.map((item, index) => `
-      <div class="item" data-index="${index}">
-        <div class="item-content">
-          <h3>${item.title}</h3>
-          ${item.description ? `<p>${item.description}</p>` : ''}
-          ${item.price ? `<span class="price">${item.price}</span>` : ''}
+    if (userSlug === 'anonymous') {
+      // Load from localStorage
+      const items = currentCollection?.items || [];
+      
+      if (items.length === 0) {
+        itemsContainer.innerHTML = `
+          <p style="text-align: center; color: var(--color-text-secondary);">
+            No items yet. Add your first item above!
+          </p>
+        `;
+        return;
+      }
+      
+      itemsContainer.innerHTML = items.map((item, index) => `
+        <div class="item" data-index="${index}">
+          <div class="item-content">
+            <h3>${item.title}</h3>
+            ${item.description ? `<p>${item.description}</p>` : ''}
+            ${item.price ? `<span class="price">${item.price}</span>` : ''}
+          </div>
+          <button onclick="deleteItem(${index})" class="btn-secondary delete-btn">
+            Delete
+          </button>
         </div>
-        <button onclick="deleteItem(${index})" class="btn-secondary delete-btn">
-          Delete
-        </button>
-      </div>
-    `).join('');
+      `).join('');
+    } else {
+      // Load from database
+      try {
+        console.log('Loading items from database for collection:', currentCollection.id);
+        
+        const { data: items, error } = await supabase
+          .from('collection_items')
+          .select('*')
+          .eq('collection_id', currentCollection.id)
+          .order('created_at', { ascending: true });
+        
+        if (error) {
+          console.error('Error loading items:', error);
+          itemsContainer.innerHTML = `
+            <p style="text-align: center; color: var(--color-error);">
+              Error loading items: ${error.message}
+            </p>
+          `;
+          return;
+        }
+        
+        console.log('Loaded items from database:', items);
+        
+        if (!items || items.length === 0) {
+          itemsContainer.innerHTML = `
+            <p style="text-align: center; color: var(--color-text-secondary);">
+              No items yet. Add your first item above!
+            </p>
+          `;
+          return;
+        }
+        
+        itemsContainer.innerHTML = items.map((item, index) => `
+          <div class="item" data-item-id="${item.id}">
+            <div class="item-content">
+              <h3>${item.title || 'Untitled'}</h3>
+              ${item.description ? `<p>${item.description}</p>` : ''}
+              ${item.price ? `<span class="price">${item.price}</span>` : ''}
+            </div>
+            <button onclick="deleteItem('${item.id}')" class="btn-secondary delete-btn">
+              Delete
+            </button>
+          </div>
+        `).join('');
+      } catch (error) {
+        console.error('Error loading items:', error);
+        itemsContainer.innerHTML = `
+          <p style="text-align: center; color: var(--color-error);">
+            Error loading items: ${error.message}
+          </p>
+        `;
+      }
+    }
   }
   
   // Add item flow functions
@@ -309,6 +365,7 @@ const { user, collection } = Astro.params;
     };
     
     console.log('Adding item:', newItem);
+    console.log('Current collection:', currentCollection);
     
     // Add to collection
     if (!currentCollection.items) {
@@ -321,10 +378,13 @@ const { user, collection } = Astro.params;
       anonymousSession.updateCollection(collectionSlug, {
         items: currentCollection.items
       });
+      console.log('Saved to localStorage');
     } else {
       // Save to database
       try {
-        const { error } = await supabase
+        console.log('Saving to database with collection_id:', currentCollection.id);
+        
+        const { data, error } = await supabase
           .from('collection_items')
           .insert({
             collection_id: currentCollection.id,
@@ -332,13 +392,20 @@ const { user, collection } = Astro.params;
             title: newItem.title,
             description: newItem.description,
             price: newItem.price
-          });
+          })
+          .select();
         
         if (error) {
           console.error('Error saving item to database:', error);
+          alert('Error saving item: ' + error.message);
+          return;
+        } else {
+          console.log('Item saved successfully:', data);
         }
       } catch (error) {
         console.error('Error saving item:', error);
+        alert('Error saving item: ' + error.message);
+        return;
       }
     }
     
@@ -347,15 +414,36 @@ const { user, collection } = Astro.params;
     loadItems();
   }
   
-  function deleteItem(index) {
+  async function deleteItem(itemId) {
     if (confirm('Are you sure you want to delete this item?')) {
-      currentCollection.items.splice(index, 1);
-      
-      // Save to storage
       if (userSlug === 'anonymous') {
+        // Delete from localStorage
+        currentCollection.items.splice(itemId, 1);
         anonymousSession.updateCollection(collectionSlug, {
           items: currentCollection.items
         });
+      } else {
+        // Delete from database
+        try {
+          console.log('Deleting item from database:', itemId);
+          
+          const { error } = await supabase
+            .from('collection_items')
+            .delete()
+            .eq('id', itemId);
+          
+          if (error) {
+            console.error('Error deleting item:', error);
+            alert('Error deleting item: ' + error.message);
+            return;
+          } else {
+            console.log('Item deleted successfully');
+          }
+        } catch (error) {
+          console.error('Error deleting item:', error);
+          alert('Error deleting item: ' + error.message);
+          return;
+        }
       }
       
       loadItems();
