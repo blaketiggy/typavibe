@@ -52,6 +52,7 @@ import Layout from '../../layouts/Layout.astro';
             id: user.id,
             username: username,
             display_name: username,
+            email: user.email,
             created_at: new Date().toISOString()
           });
         
@@ -97,6 +98,7 @@ import Layout from '../../layouts/Layout.astro';
                 id: user.id,
                 username: fallbackUsername,
                 display_name: `User ${user.id.substring(0, 8)}`,
+                email: user.email,
                 created_at: new Date().toISOString()
               });
             
