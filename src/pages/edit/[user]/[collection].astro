@@ -171,25 +171,43 @@ const { user, collection } = Astro.params;
         }
       } else {
         // Load from database
+        console.log('Loading collection from database for user:', userSlug, 'slug:', collectionSlug);
+        
         const { data: collection, error } = await supabase
           .from('collections')
           .select('*')
           .eq('slug', collectionSlug)
           .single();
         
+        console.log('Database query result:', { collection, error });
+        
         if (collection && !error) {
           currentCollection = collection;
           console.log('Loaded collection from database:', collection);
+        } else if (error) {
+          console.error('Error loading collection from database:', error);
+          // Try to load from localStorage as fallback
+          const anonCollection = anonymousSession.getCollectionBySlug(collectionSlug);
+          if (anonCollection) {
+            currentCollection = anonCollection;
+            console.log('Loaded collection from localStorage as fallback:', anonCollection);
+          }
         }
       }
       
       if (currentCollection) {
         document.getElementById('collection-title').textContent = currentCollection.title;
-        document.getElementById('collection-description').textContent = currentCollection.description;
+        document.getElementById('collection-description').textContent = currentCollection.description || 'No description';
+      } else {
+        console.error('No collection found for slug:', collectionSlug);
+        alert('Collection not found. Please create a new collection.');
+        window.location.href = '/create';
       }
       
     } catch (error) {
       console.error('Error loading collection:', error);
+      alert('Error loading collection. Please try again.');
+      window.location.href = '/create';
     }
   }
   

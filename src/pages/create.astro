@@ -370,15 +370,19 @@ import Layout from '../layouts/Layout.astro';
         console.log('Current user:', currentUser);
         console.log('Username:', currentUser.username);
         console.log('Slug:', slug);
-        console.log('Redirect URL:', `/edit/${currentUser.username}/${slug}`);
+        
+        // Ensure we have a username for the redirect
+        let redirectUsername = currentUser.username;
+        if (!redirectUsername) {
+          // Fallback to user ID based username
+          redirectUsername = `user_${currentUser.id.substring(0, 8)}`;
+          console.log('Using fallback username for redirect:', redirectUsername);
+        }
+        
+        console.log('Final redirect URL:', `/edit/${redirectUsername}/${slug}`);
         
         // Redirect to edit page with proper user structure
-        if (currentUser.username) {
-          window.location.href = `/edit/${currentUser.username}/${slug}`;
-        } else {
-          console.error('Username not found, redirecting to anonymous');
-          window.location.href = `/edit/anonymous/${slug}`;
-        }
+        window.location.href = `/edit/${redirectUsername}/${slug}`;
         
       } else {
         // Save to localStorage for anonymous user
