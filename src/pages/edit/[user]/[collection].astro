@@ -364,8 +364,12 @@ const { user, collection } = Astro.params;
       price: price
     };
     
+    console.log('=== ADD ITEM DEBUG ===');
     console.log('Adding item:', newItem);
     console.log('Current collection:', currentCollection);
+    console.log('User slug:', userSlug);
+    console.log('Collection slug:', collectionSlug);
+    console.log('Collection ID:', currentCollection?.id);
     
     // Add to collection
     if (!currentCollection.items) {
@@ -384,19 +388,25 @@ const { user, collection } = Astro.params;
       try {
         console.log('Saving to database with collection_id:', currentCollection.id);
         
+        const insertData = {
+          collection_id: currentCollection.id,
+          url: newItem.url,
+          title: newItem.title,
+          description: newItem.description,
+          price: newItem.price
+        };
+        
+        console.log('Insert data:', insertData);
+        
         const { data, error } = await supabase
           .from('collection_items')
-          .insert({
-            collection_id: currentCollection.id,
-            url: newItem.url,
-            title: newItem.title,
-            description: newItem.description,
-            price: newItem.price
-          })
+          .insert(insertData)
           .select();
         
         if (error) {
           console.error('Error saving item to database:', error);
+          console.error('Error details:', error.details);
+          console.error('Error hint:', error.hint);
           alert('Error saving item: ' + error.message);
           return;
         } else {
@@ -404,6 +414,7 @@ const { user, collection } = Astro.params;
         }
       } catch (error) {
         console.error('Error saving item:', error);
+        console.error('Error stack:', error.stack);
         alert('Error saving item: ' + error.message);
         return;
       }
