@@ -41,14 +41,16 @@ const title = `Sample Collection by Demo User`;
       </button>
     </div>
     
-    <!-- Create your own call-to-action -->
-    <div class="create-cta" id="create-cta" style="display: none;">
-      <div class="cta-content">
-        <h3>Create Your Own TypaVibe</h3>
-        <p>Like this collection? Create your own curated list and share it with the world!</p>
-        <a href="/create" class="btn-primary">Start Creating</a>
-      </div>
-    </div>
+         <!-- Create your own call-to-action -->
+     <div class="create-cta" id="create-cta" style="display: none;">
+       <a href="/create" class="cta-button">
+         <div class="cta-content">
+           <h3>Create Your Own TypaVibe</h3>
+           <p>Like this collection? Create your own curated list and share it with the world!</p>
+           <span class="cta-arrow">→</span>
+         </div>
+       </a>
+     </div>
     
     <!-- No edit button for published collections -->
   </main>
@@ -422,51 +424,67 @@ const title = `Sample Collection by Demo User`;
     font-weight: 500;
   }
   
-  /* Create CTA */
-  .create-cta {
-    margin-top: 48px;
-    text-align: center;
-  }
-  
-  .cta-content {
-    background: var(--color-background-secondary);
-    border: 1.5px solid var(--color-border);
-    border-radius: var(--radius);
-    padding: 32px;
-    max-width: 500px;
-    margin: 0 auto;
-  }
-  
-  .cta-content h3 {
-    margin: 0 0 12px 0;
-    font-size: 20px;
-    font-weight: 600;
-    color: var(--color-text);
-  }
-  
-  .cta-content p {
-    margin: 0 0 24px 0;
-    color: var(--color-text-secondary);
-    line-height: 1.5;
-  }
-  
-  .cta-content strong {
-    color: var(--color-accent);
-    font-weight: 600;
-  }
-  
-  .cta-content .btn-primary {
-    display: inline-block;
-    padding: 12px 24px;
-    background: var(--color-primary);
-    color: white;
-    text-decoration: none;
-    border-radius: var(--radius);
-    font-weight: 500;
-    transition: background-color 0.2s;
-  }
-  
-  .cta-content .btn-primary:hover {
-    background: var(--color-primary-hover);
-  }
+     /* Create CTA */
+   .create-cta {
+     margin-top: 48px;
+     text-align: center;
+   }
+   
+   .cta-button {
+     display: block;
+     text-decoration: none;
+     color: inherit;
+     max-width: 400px;
+     margin: 0 auto;
+   }
+   
+   .cta-content {
+     background: var(--color-background-secondary);
+     border: 1.5px solid var(--color-border);
+     border-radius: var(--radius);
+     padding: 24px;
+     text-align: center;
+     transition: all 0.2s ease;
+     position: relative;
+   }
+   
+   .cta-button:hover .cta-content {
+     border-color: var(--color-accent);
+     background: var(--color-accent);
+     color: white;
+     transform: translateY(-2px);
+     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+   }
+   
+   .cta-content h3 {
+     margin: 0 0 8px 0;
+     font-size: 18px;
+     font-weight: 600;
+     color: var(--color-text);
+   }
+   
+   .cta-content p {
+     margin: 0 0 16px 0;
+     color: var(--color-text-secondary);
+     line-height: 1.5;
+     font-size: 14px;
+   }
+   
+   .cta-content strong {
+     color: var(--color-accent);
+     font-weight: 600;
+   }
+   
+   .cta-arrow {
+     font-size: 18px;
+     font-weight: 600;
+     color: var(--color-accent);
+   }
+   
+   .cta-button:hover .cta-content h3,
+   .cta-button:hover .cta-content p,
+   .cta-button:hover .cta-content strong,
+   .cta-button:hover .cta-arrow {
+     color: white;
+   }
 </style> 
