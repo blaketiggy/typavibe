@@ -113,9 +113,12 @@ const title = `Sample Collection by Demo User`;
             console.log('Collection owner:', profile);
             console.log('Collection items:', items);
             
-            // Update page content
-            updateCollectionDisplay(collection);
-            return;
+                         // Update page content
+             updateCollectionDisplay(collection);
+             
+             // Show share buttons and CTA
+             showShareAndCTA(userSlug);
+             return;
           }
         }
       } catch (error) {
@@ -132,36 +135,44 @@ const title = `Sample Collection by Demo User`;
       collectionOwner = { username: 'anonymous', display_name: 'Anonymous User' };
       console.log('Found anonymous collection:', anonCollection);
       
-      updateCollectionDisplay(anonCollection);
-      
-      // Increment view count
-      anonymousSession.updateCollection(collectionSlug, {
-        view_count: (anonCollection.view_count || 0) + 1
-      });
-      
-    } else {
-      // Fallback to sample collection
-      currentCollection = {
-        title: 'Sample Collection',
-        description: 'This is a sample collection to test the design and layout.',
-        view_count: 42
-      };
-      collectionOwner = { username: 'demo', display_name: 'Demo User' };
-      
-      updateCollectionDisplay(currentCollection);
-    }
-    
-    // Show share buttons for all collections
-    document.getElementById('share-buttons').style.display = 'flex';
-    
-    // Show create CTA for authenticated users (not anonymous)
-    if (userSlug !== 'anonymous' && userSlug !== 'demo') {
-      const ctaElement = document.getElementById('create-cta');
-      const ctaText = ctaElement.querySelector('p');
-      ctaText.innerHTML = `Like this collection? Create your own curated list like <strong>@${userSlug}</strong> and share it with the world!`;
-      ctaElement.style.display = 'block';
-    }
-  }
+             updateCollectionDisplay(anonCollection);
+       
+       // Increment view count
+       anonymousSession.updateCollection(collectionSlug, {
+         view_count: (anonCollection.view_count || 0) + 1
+       });
+       
+       // Show share buttons and CTA
+       showShareAndCTA(userSlug);
+       
+     } else {
+       // Fallback to sample collection
+       currentCollection = {
+         title: 'Sample Collection',
+         description: 'This is a sample collection to test the design and layout.',
+         view_count: 42
+       };
+       collectionOwner = { username: 'demo', display_name: 'Demo User' };
+       
+       updateCollectionDisplay(currentCollection);
+       
+       // Show share buttons and CTA
+       showShareAndCTA(userSlug);
+     }
+   }
+   
+   function showShareAndCTA(userSlug) {
+     // Show share buttons for all collections
+     document.getElementById('share-buttons').style.display = 'flex';
+     
+     // Show create CTA for authenticated users (not anonymous)
+     if (userSlug !== 'anonymous' && userSlug !== 'demo') {
+       const ctaElement = document.getElementById('create-cta');
+       const ctaText = ctaElement.querySelector('p');
+       ctaText.innerHTML = `Like this collection? Create your own curated list like <strong>@${userSlug}</strong> and share it with the world!`;
+       ctaElement.style.display = 'block';
+     }
+   }
   
   function updateBreadcrumbs(userSlug, collectionSlug) {
     const usernameElement = document.getElementById('breadcrumb-username');
