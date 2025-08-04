@@ -84,10 +84,25 @@ const title = `Sample Collection by Demo User`;
             .single();
           
           if (profile && !profileError) {
+            // Now get the collection items
+            const { data: items, error: itemsError } = await supabase
+              .from('collection_items')
+              .select('*')
+              .eq('collection_id', collection.id)
+              .order('created_at', { ascending: true });
+            
+            if (itemsError) {
+              console.error('Error loading items:', itemsError);
+            }
+            
+            // Add items to the collection object
+            collection.collection_items = items || [];
+            
             currentCollection = collection;
             collectionOwner = profile;
             console.log('Found collection in database:', collection);
             console.log('Collection owner:', profile);
+            console.log('Collection items:', items);
             
             // Update page content
             updateCollectionDisplay(collection);
