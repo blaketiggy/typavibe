@@ -242,8 +242,6 @@ const { user, collection } = Astro.params;
     } else {
       // Load from database
       try {
-        console.log('Loading items from database for collection:', currentCollection.id);
-        
         const { data: items, error } = await supabase
           .from('collection_items')
           .select('*')
@@ -259,8 +257,6 @@ const { user, collection } = Astro.params;
           `;
           return;
         }
-        
-        console.log('Loaded items from database:', items);
         
         if (!items || items.length === 0) {
           itemsContainer.innerHTML = `
@@ -364,13 +360,6 @@ const { user, collection } = Astro.params;
       price: price
     };
     
-    console.log('=== ADD ITEM DEBUG ===');
-    console.log('Adding item:', newItem);
-    console.log('Current collection:', currentCollection);
-    console.log('User slug:', userSlug);
-    console.log('Collection slug:', collectionSlug);
-    console.log('Collection ID:', currentCollection?.id);
-    
     // Add to collection
     if (!currentCollection.items) {
       currentCollection.items = [];
@@ -386,8 +375,6 @@ const { user, collection } = Astro.params;
     } else {
       // Save to database
       try {
-        console.log('Saving to database with collection_id:', currentCollection.id);
-        
         const insertData = {
           collection_id: currentCollection.id,
           url: newItem.url,
@@ -396,8 +383,6 @@ const { user, collection } = Astro.params;
           price: newItem.price
         };
         
-        console.log('Insert data:', insertData);
-        
         const { data, error } = await supabase
           .from('collection_items')
           .insert(insertData)
@@ -405,16 +390,11 @@ const { user, collection } = Astro.params;
         
         if (error) {
           console.error('Error saving item to database:', error);
-          console.error('Error details:', error.details);
-          console.error('Error hint:', error.hint);
           alert('Error saving item: ' + error.message);
           return;
-        } else {
-          console.log('Item saved successfully:', data);
         }
       } catch (error) {
         console.error('Error saving item:', error);
-        console.error('Error stack:', error.stack);
         alert('Error saving item: ' + error.message);
         return;
       }
@@ -436,8 +416,6 @@ const { user, collection } = Astro.params;
       } else {
         // Delete from database
         try {
-          console.log('Deleting item from database:', itemId);
-          
           const { error } = await supabase
             .from('collection_items')
             .delete()
@@ -447,8 +425,6 @@ const { user, collection } = Astro.params;
             console.error('Error deleting item:', error);
             alert('Error deleting item: ' + error.message);
             return;
-          } else {
-            console.log('Item deleted successfully');
           }
         } catch (error) {
           console.error('Error deleting item:', error);
