@@ -19,7 +19,7 @@ const title = `Sample Collection by Demo User`;
     <nav class="breadcrumbs" id="breadcrumbs">
       <a href="/" class="breadcrumb-link">Home</a>
       <span class="breadcrumb-separator">/</span>
-      <a href="/${userSlug}" class="breadcrumb-link" id="breadcrumb-username">Loading...</a>
+      <a href="#" class="breadcrumb-link" id="breadcrumb-username">Loading...</a>
       <span class="breadcrumb-separator">/</span>
       <span class="breadcrumb-current" id="breadcrumb-collection">Loading...</span>
     </nav>
@@ -153,10 +153,13 @@ const title = `Sample Collection by Demo User`;
     // Set username breadcrumb
     if (userSlug === 'anonymous') {
       usernameElement.textContent = 'Anonymous';
+      usernameElement.href = '/anonymous';
     } else if (userSlug === 'demo') {
       usernameElement.textContent = 'Demo';
+      usernameElement.href = '/demo';
     } else {
       usernameElement.textContent = userSlug;
+      usernameElement.href = `/${userSlug}`;
     }
     
     // Set collection breadcrumb
