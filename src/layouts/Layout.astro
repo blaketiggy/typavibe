@@ -93,16 +93,36 @@ const defaultStructuredData = {
     <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" as="style" />
     <link rel="preload" href="/og-image.png" as="image" />
     
+    <!-- Cache busting for development -->
+    {import.meta.env.DEV && (
+      <>
+        <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+        <meta http-equiv="Pragma" content="no-cache" />
+        <meta http-equiv="Expires" content="0" />
+      </>
+    )}
+    
     <!-- Google Analytics -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-      gtag('config', 'G-XXXXXXXXXX', {
-        page_title: '{title}',
-        page_location: '{url}'
-      });
+      gtag('config', 'G-XXXXXXXXXX');
+    </script>
+    
+    <!-- Cache busting script version -->
+    <script>
+      // Force cache busting in development
+      if (import.meta.env.DEV) {
+        const timestamp = Date.now();
+        const scripts = document.querySelectorAll('script[src]');
+        scripts.forEach(script => {
+          if (script.src.includes('astro') || script.src.includes('vite')) {
+            script.src += (script.src.includes('?') ? '&' : '?') + 'v=' + timestamp;
+          }
+        });
+      }
     </script>
   </head>
   <body>

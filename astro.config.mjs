@@ -35,6 +35,21 @@ export default defineConfig({
     },
     optimizeDeps: {
       include: ['@supabase/supabase-js']
+    },
+    // Cache busting for development
+    server: {
+      hmr: {
+        overlay: true
+      }
+    },
+    // Disable caching in development
+    define: {
+      __DEV__: true
     }
+  },
+  
+  // Development optimizations
+  experimental: {
+    assets: true
   }
 });

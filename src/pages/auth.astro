@@ -161,8 +161,11 @@ import Layout from '../layouts/Layout.astro';
       return;
     }
     
+    console.log('Sending OTP to:', email);
+    
     try {
-      const { error } = await supabase.auth.signInWithOtp({
+      // Try the explicit OTP method
+      const { data, error } = await supabase.auth.signInWithOtp({
         email: email,
         options: {
           shouldCreateUser: true,
@@ -170,9 +173,42 @@ import Layout from '../layouts/Layout.astro';
         }
       });
       
+      console.log('OTP response:', { data, error });
+      
       if (error) {
-        alert('Error sending OTP: ' + error.message);
+        console.error('OTP error:', error);
+        
+        // If the first method fails, try alternative approach
+        if (error.message.includes('magic link') || error.message.includes('not configured')) {
+          console.log('Trying alternative OTP method...');
+          
+          const { data: altData, error: altError } = await supabase.auth.signInWithOtp({
+            email: email,
+            options: {
+              shouldCreateUser: true
+            }
+          });
+          
+          if (altError) {
+            console.error('Alternative OTP error:', altError);
+            alert('Error sending OTP: ' + altError.message);
+          } else {
+            console.log('Alternative OTP sent successfully');
+            // Show code input
+            document.getElementById('email-step').style.display = 'none';
+            document.getElementById('code-step').style.display = 'block';
+            
+            // Start timer
+            startOTPTimer();
+            
+            // Focus first OTP input
+            document.querySelector('.otp-input').focus();
+          }
+        } else {
+          alert('Error sending OTP: ' + error.message);
+        }
       } else {
+        console.log('OTP sent successfully');
         // Show code input
         document.getElementById('email-step').style.display = 'none';
         document.getElementById('code-step').style.display = 'block';
@@ -184,6 +220,7 @@ import Layout from '../layouts/Layout.astro';
         document.querySelector('.otp-input').focus();
       }
     } catch (error) {
+      console.error('OTP catch error:', error);
       alert('Error sending OTP: ' + error.message);
     }
   }
