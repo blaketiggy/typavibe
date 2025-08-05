@@ -309,7 +309,7 @@ import Layout from '../layouts/Layout.astro';
         id: currentUser ? `user_${Date.now()}` : `anon_${Date.now()}`,
         title: 'Untitled Collection',
         description: 'No description',
-        slug: `collection-${Date.now()}`,
+        slug: null, // Don't set slug until publishing
         items: [],
         created_at: new Date().toISOString(),
         is_anonymous: !currentUser
@@ -467,6 +467,16 @@ import Layout from '../layouts/Layout.astro';
     
     currentCollection.title = titleInput.value || 'Untitled Collection';
     currentCollection.description = descriptionInput.value || 'No description';
+    
+    // Generate unique slug for this collection
+    const baseSlug = currentCollection.title.toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '');
+    
+    // Add timestamp to make slug unique
+    const timestamp = Date.now();
+    const slug = `${baseSlug}-${timestamp}`;
+    currentCollection.slug = slug;
     
     // Save to localStorage if anonymous
     if (!currentUser) {
