@@ -528,12 +528,12 @@ import Layout from '../layouts/Layout.astro';
         }
         
         // Add all items to database
-        console.log('Starting to save items to database...');
-        console.log('Number of items to save:', currentCollection.items.length);
+        saveLog('Starting to save items to database...');
+        saveLog('Number of items to save:', currentCollection.items.length);
         
         for (const item of currentCollection.items) {
-          console.log('Saving item to database:', item);
-          console.log('Collection ID for item:', collection.id);
+          saveLog('Saving item to database:', item);
+          saveLog('Collection ID for item:', collection.id);
           
           const { data: itemData, error: itemError } = await supabase
             .from('collection_items')
@@ -547,16 +547,16 @@ import Layout from '../layouts/Layout.astro';
             .select();
           
           if (itemError) {
-            console.error('Error saving item:', itemError);
-            console.error('Item data that failed:', item);
-            console.error('Collection ID:', collection.id);
+            saveLog('Error saving item:', itemError);
+            saveLog('Item data that failed:', item);
+            saveLog('Collection ID:', collection.id);
           } else {
-            console.log('Item saved successfully:', itemData);
+            saveLog('Item saved successfully:', itemData);
           }
         }
         
-        console.log('Finished saving all items to database');
-        console.log('Published anonymous collection to database:', collection);
+        saveLog('Finished saving all items to database');
+        saveLog('Published anonymous collection to database:', collection);
         window.location.href = `/anonymous/${slug}`;
         
       } catch (error) {
@@ -611,6 +611,41 @@ import Layout from '../layouts/Layout.astro';
   
   // Initialize page
   initializePage();
+
+  // Logging function to save logs to localStorage
+  function saveLog(message, data = null) {
+    const timestamp = new Date().toISOString();
+    const logEntry = {
+      timestamp,
+      message,
+      data
+    };
+    
+    // Get existing logs
+    let logs = JSON.parse(localStorage.getItem('debug_logs') || '[]');
+    logs.push(logEntry);
+    
+    // Keep only last 50 logs
+    if (logs.length > 50) {
+      logs = logs.slice(-50);
+    }
+    
+    localStorage.setItem('debug_logs', JSON.stringify(logs));
+    console.log(`[${timestamp}] ${message}`, data);
+  }
+  
+  // Function to get saved logs
+  function getSavedLogs() {
+    const logs = JSON.parse(localStorage.getItem('debug_logs') || '[]');
+    console.log('=== SAVED DEBUG LOGS ===');
+    logs.forEach(log => {
+      console.log(`[${log.timestamp}] ${log.message}`, log.data);
+    });
+    console.log('=== END DEBUG LOGS ===');
+  }
+  
+  // Make getSavedLogs globally accessible
+  window.getSavedLogs = getSavedLogs;
 </script>
 
 <style>
