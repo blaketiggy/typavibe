@@ -14,15 +14,10 @@ import Layout from '../layouts/Layout.astro';
       <h1>Curate anything, share everything</h1>
       <p class="hero-subtitle">The simplest way to create and share collections of anything you love</p>
       
-      <!-- Quick create form -->
-      <form action="/create" method="GET">
-        <input 
-          name="quick" 
-          placeholder="What are you curating today?" 
-          required 
-        />
-        <button type="submit">Start Creating</button>
-      </form>
+      <!-- Single CTA button -->
+      <button id="start-collection-btn" class="btn-primary hero-cta">
+        🚀 Start Your Collection
+      </button>
     </section>
     
     <!-- Use cases -->
@@ -93,14 +88,244 @@ import Layout from '../layouts/Layout.astro';
       </div>
     </section>
   </main>
+  
+  <!-- Auth Choice Modal -->
+  <div id="auth-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>How would you like to start?</h2>
+        <button class="modal-close" onclick="closeAuthModal()">×</button>
+      </div>
+      
+      <div class="auth-options">
+        <!-- Anonymous Option -->
+        <div class="auth-option-card">
+          <div class="option-icon">🚀</div>
+          <h3>Start Anonymously</h3>
+          <p>Create your collection right now. Save locally and share with a link.</p>
+          <div class="option-benefits">
+            <span>✅ No signup required</span>
+            <span>✅ Start immediately</span>
+            <span>✅ Share with link</span>
+          </div>
+          <button onclick="startAnonymous()" class="btn-primary">Start Now</button>
+        </div>
+        
+        <!-- Sign In Option -->
+        <div class="auth-option-card">
+          <div class="option-icon">🔑</div>
+          <h3>Sign In</h3>
+          <p>Already have an account? Sign in to access your collections.</p>
+          <div class="option-benefits">
+            <span>✅ Access your collections</span>
+            <span>✅ Permanent storage</span>
+            <span>✅ Share with username</span>
+          </div>
+          <button onclick="window.location.href='/auth'" class="btn-secondary">Sign In</button>
+        </div>
+        
+        <!-- Sign Up Option -->
+        <div class="auth-option-card">
+          <div class="option-icon">👤</div>
+          <h3>Create Account</h3>
+          <p>Create a free account to save collections permanently.</p>
+          <div class="option-benefits">
+            <span>✅ Permanent storage</span>
+            <span>✅ Share with username</span>
+            <span>✅ Access from anywhere</span>
+          </div>
+          <button onclick="window.location.href='/auth'" class="btn-secondary">Create Account</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </Layout>
 
+<script>
+  import { supabase } from '../lib/supabase.js';
+  
+  let currentUser = null;
+  
+  // Check authentication status
+  async function checkAuth() {
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (!error && user) {
+        currentUser = user;
+        console.log('User authenticated:', user.email);
+      }
+    } catch (error) {
+      console.error('Auth check error:', error);
+    }
+  }
+  
+  // Handle start collection button
+  document.getElementById('start-collection-btn').addEventListener('click', async () => {
+    if (currentUser) {
+      // User is logged in, go directly to create
+      window.location.href = '/create';
+    } else {
+      // User is not logged in, show auth modal
+      showAuthModal();
+    }
+  });
+  
+  function showAuthModal() {
+    document.getElementById('auth-modal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+  
+  function closeAuthModal() {
+    document.getElementById('auth-modal').style.display = 'none';
+    document.body.style.overflow = 'auto';
+  }
+  
+  function startAnonymous() {
+    closeAuthModal();
+    window.location.href = '/create';
+  }
+  
+  // Close modal when clicking outside
+  document.getElementById('auth-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'auth-modal') {
+      closeAuthModal();
+    }
+  });
+  
+  // Initialize
+  checkAuth();
+</script>
+
 <style>
+  .hero-cta {
+    font-size: 18px;
+    padding: 16px 32px;
+    font-weight: 600;
+  }
+  
   .hero-subtitle {
     font-size: 18px;
     color: var(--color-text-secondary);
     margin-bottom: 32px;
     line-height: 1.5;
+  }
+  
+  /* Modal Styles */
+  .modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  
+  .modal-content {
+    background: var(--color-background);
+    border-radius: var(--radius);
+    padding: 32px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+  
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+  
+  .modal-header h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+  }
+  
+  .modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s;
+  }
+  
+  .modal-close:hover {
+    background: var(--color-background-secondary);
+    color: var(--color-text);
+  }
+  
+  .auth-options {
+    display: grid;
+    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+  
+  .auth-option-card {
+    background: var(--color-background-secondary);
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 24px;
+    text-align: center;
+    transition: all 0.2s ease;
+  }
+  
+  .auth-option-card:hover {
+    border-color: var(--color-accent);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  }
+  
+  .option-icon {
+    font-size: 32px;
+    margin-bottom: 16px;
+  }
+  
+  .auth-option-card h3 {
+    margin: 0 0 12px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-text);
+  }
+  
+  .auth-option-card p {
+    margin: 0 0 16px 0;
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+    font-size: 14px;
+  }
+  
+  .option-benefits {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 20px;
+    text-align: left;
+  }
+  
+  .option-benefits span {
+    font-size: 13px;
+    color: var(--color-text-secondary);
+  }
+  
+  .auth-option-card .btn-primary,
+  .auth-option-card .btn-secondary {
+    width: 100%;
+    margin-top: 8px;
   }
   
   .use-cases {
@@ -197,6 +422,10 @@ import Layout from '../layouts/Layout.astro';
   }
   
   @media (max-width: 768px) {
+    .auth-options {
+      grid-template-columns: 1fr;
+    }
+    
     .use-cases-grid {
       grid-template-columns: 1fr;
     }
@@ -208,6 +437,11 @@ import Layout from '../layouts/Layout.astro';
     .use-cases h2,
     .features h2 {
       font-size: 24px;
+    }
+    
+    .modal-content {
+      padding: 24px;
+      margin: 16px;
     }
   }
 </style>

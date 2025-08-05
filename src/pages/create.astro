@@ -5,60 +5,98 @@ import Layout from '../layouts/Layout.astro';
 <Layout title="Create Collection - TypaVibe">
   <main>
     <div class="create-flow">
-      <h1>Create Your Collection</h1>
-      <p class="subtitle">Start by naming your collection</p>
+      <h1>Add Your First Item</h1>
+      <p class="subtitle">Start by adding links to your collection</p>
       
       <div id="auth-status" style="display: none; margin-bottom: 20px; padding: 12px; border-radius: 6px;"></div>
       
-      <form id="create-form">
-        <input 
-          id="title" 
-          name="title" 
-          placeholder="Collection title" 
-          required 
-        />
+      <!-- Collection Info (hidden initially) -->
+      <div id="collection-info" style="display: none; margin-bottom: 32px;">
+        <div class="collection-header">
+          <h2 id="collection-title">Untitled Collection</h2>
+          <p id="collection-description" style="color: var(--color-text-secondary);">No description</p>
+        </div>
+        <button onclick="editCollectionInfo()" class="btn-secondary">Edit Title & Description</button>
+      </div>
+      
+      <!-- Add Item Section -->
+      <section class="add-item-section">
+        <h2>Add Items</h2>
         
-        <textarea 
-          id="description" 
-          name="description" 
-          placeholder="What's this collection about?"
-        ></textarea>
+        <!-- Add Item Button -->
+        <button id="add-item-btn" class="btn-primary">
+          ➕ Add Item
+        </button>
         
-        <!-- Tag selection -->
-        <div class="tag-selection">
-          <label>Tags (optional):</label>
-          <div class="tag-options">
-            <label class="tag-option">
-              <input type="checkbox" value="fashion" />
-              <span>Fashion</span>
-            </label>
-            <label class="tag-option">
-              <input type="checkbox" value="tech" />
-              <span>Tech</span>
-            </label>
-            <label class="tag-option">
-              <input type="checkbox" value="home" />
-              <span>Home</span>
-            </label>
-            <label class="tag-option">
-              <input type="checkbox" value="beauty" />
-              <span>Beauty</span>
-            </label>
-            <label class="tag-option">
-              <input type="checkbox" value="fitness" />
-              <span>Fitness</span>
-            </label>
-            <label class="tag-option">
-              <input type="checkbox" value="food" />
-              <span>Food</span>
-            </label>
+        <!-- Step-by-step form (hidden initially) -->
+        <div id="add-item-form" class="step-form" style="display: none;">
+          <div class="step" id="step-url">
+            <label>Product URL</label>
+            <input 
+              id="item-url" 
+              placeholder="Paste product URL here..." 
+              type="url" 
+              required 
+            />
+            <div class="step-buttons">
+              <button type="button" class="btn-secondary" onclick="cancelAddItem()">Cancel</button>
+              <button type="button" class="btn-primary" onclick="nextStep('title')">Next</button>
+            </div>
+          </div>
+          
+          <div class="step" id="step-title" style="display: none;">
+            <label>Item Title (optional)</label>
+            <input 
+              id="item-title" 
+              placeholder="Leave blank to use website title" 
+            />
+            <div class="step-buttons">
+              <button type="button" class="btn-secondary" onclick="prevStep('url')">Back</button>
+              <button type="button" class="btn-primary" onclick="nextStep('notes')">Next</button>
+            </div>
+          </div>
+          
+          <div class="step" id="step-notes" style="display: none;">
+            <label>Notes (optional)</label>
+            <textarea 
+              id="item-notes" 
+              placeholder="Add any notes about this item..."
+              rows="3"
+            ></textarea>
+            <div class="step-buttons">
+              <button type="button" class="btn-secondary" onclick="prevStep('title')">Back</button>
+              <button type="button" class="btn-primary" onclick="nextStep('price')">Next</button>
+            </div>
+          </div>
+          
+          <div class="step" id="step-price" style="display: none;">
+            <label>Price (optional)</label>
+            <input 
+              id="item-price" 
+              placeholder="e.g., $29.99" 
+              type="text"
+            />
+            <div class="step-buttons">
+              <button type="button" class="btn-secondary" onclick="prevStep('notes')">Back</button>
+              <button type="button" class="btn-primary" onclick="addItem()">Add Item</button>
+            </div>
           </div>
         </div>
-        
-        <button type="submit" class="btn-primary" id="submit-btn">
-          Create Collection
+      </section>
+      
+      <!-- Items list appears here -->
+      <div id="items-list" style="margin-top: 32px;">
+        <p style="text-align: center; color: var(--color-text-secondary);">No items yet. Add your first item above!</p>
+      </div>
+      
+      <div style="margin-top: 48px; text-align: center;">
+        <button id="publish-btn" class="btn-primary" style="display: none;">
+          🚀 Publish & Share
         </button>
-      </form>
+        <button onclick="window.location.href='/'" class="btn-secondary" style="margin-left: 12px;">
+          Back to Home
+        </button>
+      </div>
     </div>
   </main>
 </Layout>
@@ -68,6 +106,7 @@ import Layout from '../layouts/Layout.astro';
   import { anonymousSession } from '../lib/anonymous.js';
   
   let currentUser = null;
+  let currentCollection = null;
   let authChecked = false;
   
   // Make anonymousSession globally accessible
@@ -76,15 +115,6 @@ import Layout from '../layouts/Layout.astro';
   // Initialize page
   function initializePage() {
     console.log('Initializing create page...');
-    
-    // Get quick title from URL params
-    const urlParams = new URLSearchParams(window.location.search);
-    const quickTitle = urlParams.get('title') || urlParams.get('quick') || '';
-    
-    if (quickTitle) {
-      console.log('Setting quick title:', quickTitle);
-      document.getElementById('title').value = quickTitle;
-    }
     
     // Initialize auth check
     checkAuth();
@@ -180,316 +210,287 @@ import Layout from '../layouts/Layout.astro';
     }
   }
   
-  document.getElementById('create-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    // Wait for auth check to complete
-    if (!authChecked) {
-      console.log('Waiting for auth check...');
-      await checkAuth();
+  // Add item flow functions
+  function nextStep(step) {
+    // Hide current step
+    const currentStep = document.querySelector('.step[style*="display: block"]');
+    if (currentStep) {
+      currentStep.style.display = 'none';
     }
     
-    const title = document.getElementById('title').value;
-    const description = document.getElementById('description').value;
+    // Show next step
+    document.getElementById(`step-${step}`).style.display = 'block';
+  }
+  
+  function prevStep(step) {
+    // Hide current step
+    const currentStep = document.querySelector('.step[style*="display: block"]');
+    if (currentStep) {
+      currentStep.style.display = 'none';
+    }
     
-    // Get selected tags
-    const selectedTags = [];
-    document.querySelectorAll('.tag-option input:checked').forEach(checkbox => {
-      selectedTags.push(checkbox.value);
+    // Show previous step
+    document.getElementById(`step-${step}`).style.display = 'block';
+  }
+  
+  function cancelAddItem() {
+    // Hide form
+    document.getElementById('add-item-form').style.display = 'none';
+    document.getElementById('add-item-btn').style.display = 'block';
+    
+    // Clear inputs
+    document.getElementById('item-url').value = '';
+    document.getElementById('item-title').value = '';
+    document.getElementById('item-notes').value = '';
+    document.getElementById('item-price').value = '';
+    
+    // Reset to first step
+    document.querySelectorAll('.step').forEach(step => {
+      step.style.display = 'none';
     });
+    document.getElementById('step-url').style.display = 'block';
+  }
+  
+  async function addItem() {
+    const url = document.getElementById('item-url').value;
+    const title = document.getElementById('item-title').value;
+    const notes = document.getElementById('item-notes').value;
+    const price = document.getElementById('item-price').value;
     
-    // Create slug from title
-    const slug = title.toLowerCase()
+    if (!url) {
+      alert('Please enter a URL');
+      return;
+    }
+    
+    // Extract title from URL if not provided
+    let itemTitle = title;
+    if (!itemTitle) {
+      try {
+        const urlObj = new URL(url);
+        itemTitle = urlObj.hostname.replace('www.', '');
+      } catch (e) {
+        itemTitle = 'Untitled Item';
+      }
+    }
+    
+    const newItem = {
+      url: url,
+      title: itemTitle,
+      description: notes,
+      price: price
+    };
+    
+    // Initialize collection if it doesn't exist
+    if (!currentCollection) {
+      currentCollection = {
+        id: currentUser ? `user_${Date.now()}` : `anon_${Date.now()}`,
+        title: 'Untitled Collection',
+        description: 'No description',
+        slug: `collection-${Date.now()}`,
+        items: [],
+        created_at: new Date().toISOString(),
+        is_anonymous: !currentUser
+      };
+      
+      // Show collection info after first item
+      document.getElementById('collection-info').style.display = 'block';
+      document.getElementById('publish-btn').style.display = 'inline-block';
+    }
+    
+    // Add to collection
+    currentCollection.items.push(newItem);
+    
+    // Save to storage
+    if (!currentUser) {
+      anonymousSession.saveAnonymousCollection(currentCollection);
+      console.log('Saved to localStorage');
+    } else {
+      // Save to database
+      try {
+        if (!currentCollection.db_id) {
+          // Create collection in database
+          const { data: collection, error } = await supabase
+            .from('collections')
+            .insert({
+              user_id: currentUser.id,
+              title: currentCollection.title,
+              description: currentCollection.description,
+              slug: currentCollection.slug,
+              is_public: true,
+              is_anonymous: false
+            })
+            .select()
+            .single();
+          
+          if (error) {
+            console.error('Error creating collection:', error);
+            alert('Error creating collection: ' + error.message);
+            return;
+          }
+          
+          currentCollection.db_id = collection.id;
+        }
+        
+        // Add item to database
+        const { error: itemError } = await supabase
+          .from('collection_items')
+          .insert({
+            collection_id: currentCollection.db_id,
+            url: newItem.url,
+            title: newItem.title,
+            description: newItem.description,
+            price: newItem.price
+          });
+        
+        if (itemError) {
+          console.error('Error saving item:', itemError);
+          alert('Error saving item: ' + itemError.message);
+          return;
+        }
+      } catch (error) {
+        console.error('Error saving item:', error);
+        alert('Error saving item: ' + error.message);
+        return;
+      }
+    }
+    
+    // Reset form and reload items
+    cancelAddItem();
+    await loadItems();
+  }
+  
+  async function loadItems() {
+    const itemsContainer = document.getElementById('items-list');
+    
+    if (!currentCollection || !currentCollection.items || currentCollection.items.length === 0) {
+      itemsContainer.innerHTML = `
+        <p style="text-align: center; color: var(--color-text-secondary);">
+          No items yet. Add your first item above!
+        </p>
+      `;
+      return;
+    }
+    
+    itemsContainer.innerHTML = currentCollection.items.map((item, index) => `
+      <div class="item" data-index="${index}">
+        <div class="item-content">
+          <h3>${item.title}</h3>
+          ${item.description ? `<p>${item.description}</p>` : ''}
+          ${item.price ? `<span class="price">${item.price}</span>` : ''}
+        </div>
+        <button onclick="deleteItem(${index})" class="btn-secondary delete-btn">
+          Delete
+        </button>
+      </div>
+    `).join('');
+  }
+  
+  async function deleteItem(itemId) {
+    if (confirm('Are you sure you want to delete this item?')) {
+      currentCollection.items.splice(itemId, 1);
+      
+      if (!currentUser) {
+        anonymousSession.updateCollection(currentCollection.slug, {
+          items: currentCollection.items
+        });
+      } else {
+        // Delete from database
+        try {
+          const { error } = await supabase
+            .from('collection_items')
+            .delete()
+            .eq('collection_id', currentCollection.db_id)
+            .eq('url', currentCollection.items[itemId].url);
+          
+          if (error) {
+            console.error('Error deleting item:', error);
+          }
+        } catch (error) {
+          console.error('Error deleting item:', error);
+        }
+      }
+      
+      await loadItems();
+    }
+  }
+  
+  function editCollectionInfo() {
+    const title = prompt('Collection title:', currentCollection.title);
+    if (title !== null) {
+      currentCollection.title = title;
+      document.getElementById('collection-title').textContent = title;
+    }
+    
+    const description = prompt('Collection description:', currentCollection.description);
+    if (description !== null) {
+      currentCollection.description = description;
+      document.getElementById('collection-description').textContent = description;
+    }
+  }
+  
+  async function publishCollection() {
+    if (!currentCollection || currentCollection.items.length === 0) {
+      alert('Please add at least one item to your collection');
+      return;
+    }
+    
+    // Generate slug from title
+    const slug = currentCollection.title.toLowerCase()
       .replace(/\s+/g, '-')
       .replace(/[^a-z0-9-]/g, '');
     
-    const submitBtn = document.getElementById('submit-btn');
-    const originalText = submitBtn.textContent;
+    currentCollection.slug = slug;
     
-    try {
-      submitBtn.textContent = 'Creating...';
-      submitBtn.disabled = true;
-      
-      if (!currentUser) {
-        // Show enhanced nudge for anonymous publishing
-        const authStatus = document.getElementById('auth-status');
-        authStatus.innerHTML = `
-          <div class="auth-nudge">
-            <div class="nudge-icon">📝</div>
-            <h3>Save Your Collection</h3>
-            <p>Create an account to save your collection permanently and access it from anywhere. Or continue anonymously (saved locally only).</p>
-            <div class="nudge-benefits">
-              <div class="benefit">
-                <span class="benefit-icon">💾</span>
-                <span>Permanent storage</span>
-              </div>
-              <div class="benefit">
-                <span class="benefit-icon">🔗</span>
-                <span>Share with username</span>
-              </div>
-              <div class="benefit">
-                <span class="benefit-icon">📱</span>
-                <span>Access from anywhere</span>
-              </div>
-            </div>
-            <div class="nudge-actions">
-              <a href="/auth" class="btn-primary">Create Account</a>
-              <a href="/auth" class="btn-secondary">Sign In</a>
-              <button onclick="continueAnonymous()" class="btn-secondary">Continue Anonymously</button>
-            </div>
-          </div>
-        `;
-        authStatus.style.display = 'block';
-        
-        // Reset button state
-        const submitBtn = document.getElementById('submit-btn');
-        submitBtn.textContent = 'Create Collection';
-        submitBtn.disabled = false;
-        return;
-      }
-      
-      if (currentUser) {
-        // Save to database for authenticated user
-        console.log('Creating collection with user:', currentUser.email);
-        
-        // First, ensure the user profile exists
-        try {
-          console.log('Checking if profile exists for user:', currentUser.id);
-          const { data: existingProfile, error: profileCheckError } = await supabase
-            .from('profiles')
-            .select('id, username')
-            .eq('id', currentUser.id)
-            .single();
-
-          console.log('Profile check result:', { existingProfile, profileCheckError });
-
-          if (!existingProfile && !profileCheckError) {
-            // Profile doesn't exist, create it
-            console.log('Creating user profile...');
-            const fallbackUsername = `user_${currentUser.id.substring(0, 8)}`;
-            console.log('Using fallback username:', fallbackUsername);
-
-            const { data: newProfile, error: profileCreateError } = await supabase
-              .from('profiles')
-              .insert({
-                id: currentUser.id,
-                username: currentUser.username || fallbackUsername,
-                display_name: currentUser.username || `User ${currentUser.id.substring(0, 8)}`,
-                email: currentUser.email,
-                created_at: new Date().toISOString()
-              })
-              .select()
-              .single();
-
-            console.log('Profile creation result:', { newProfile, profileCreateError });
-
-            if (profileCreateError) {
-              console.error('Error creating profile:', profileCreateError);
-              throw new Error(`Failed to create user profile: ${profileCreateError.message}`);
-            }
-
-            // Update currentUser with the new profile info
-            if (newProfile) {
-              currentUser.username = newProfile.username;
-              console.log('Updated currentUser.username to:', currentUser.username);
-            }
-          } else if (existingProfile) {
-            console.log('Profile already exists:', existingProfile);
-            // Update currentUser with existing profile info
-            currentUser.username = existingProfile.username;
-            console.log('Updated currentUser.username to:', currentUser.username);
-          } else if (profileCheckError) {
-            // Handle the case where the profile doesn't exist but we got an error
-            console.log('Profile check error, attempting to create profile...');
-            const fallbackUsername = `user_${currentUser.id.substring(0, 8)}`;
-            
-            const { data: newProfile, error: profileCreateError } = await supabase
-              .from('profiles')
-              .insert({
-                id: currentUser.id,
-                username: currentUser.username || fallbackUsername,
-                display_name: currentUser.username || `User ${currentUser.id.substring(0, 8)}`,
-                email: currentUser.email,
-                created_at: new Date().toISOString()
-              })
-              .select()
-              .single();
-
-            console.log('Profile creation result:', { newProfile, profileCreateError });
-
-            if (profileCreateError) {
-              console.error('Error creating profile:', profileCreateError);
-              throw new Error(`Failed to create user profile: ${profileCreateError.message}`);
-            }
-
-            // Update currentUser with the new profile info
-            if (newProfile) {
-              currentUser.username = newProfile.username;
-              console.log('Updated currentUser.username to:', currentUser.username);
-            }
-          }
-        } catch (profileError) {
-          console.error('Profile check/create error:', profileError);
-          throw new Error(`Profile setup failed: ${profileError.message}`);
-        }
-        
-        // Now create the collection
-        console.log('Creating collection with user_id:', currentUser.id);
-        console.log('User ID type:', typeof currentUser.id);
-        console.log('User ID length:', currentUser.id.length);
-        console.log('Collection data:', {
-          user_id: currentUser.id,
-          title: title,
-          description: description,
-          slug: slug,
-          tags: selectedTags,
-          is_public: true,
-          is_anonymous: false
-        });
-        
-        // First, let's verify the user exists in the profiles table
-        const { data: profileCheck, error: profileCheckError } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('id', currentUser.id)
-          .single();
-        
-        console.log('Profile check before collection creation:', { profileCheck, profileCheckError });
-        
-        if (!profileCheck) {
-          throw new Error(`User profile not found in database. User ID: ${currentUser.id}`);
-        }
-        
-        const { data: collection, error } = await supabase
+    if (!currentUser) {
+      // Save anonymous collection
+      anonymousSession.saveAnonymousCollection(currentCollection);
+      window.location.href = `/edit/anonymous/${slug}`;
+    } else {
+      // Update collection in database
+      try {
+        const { error } = await supabase
           .from('collections')
-          .insert({
-            user_id: currentUser.id,
-            title: title,
-            description: description,
-            slug: slug,
-            tags: selectedTags,
-            is_public: true,
-            is_anonymous: false
+          .update({
+            title: currentCollection.title,
+            description: currentCollection.description,
+            slug: slug
           })
-          .select()
-          .single();
-        
-        console.log('Collection creation result:', { collection, error });
+          .eq('id', currentCollection.db_id);
         
         if (error) {
-          console.error('Collection creation error details:', error);
-          throw error;
+          console.error('Error updating collection:', error);
+          alert('Error updating collection: ' + error.message);
+          return;
         }
         
-        console.log('Collection created in database:', collection);
-        
-        // Debug the redirect URL
-        console.log('Current user:', currentUser);
-        console.log('Username:', currentUser.username);
-        console.log('Slug:', slug);
-        
-        // Ensure we have a username for the redirect
-        let redirectUsername = currentUser.username;
-        if (!redirectUsername) {
-          // Fallback to user ID based username
-          redirectUsername = `user_${currentUser.id.substring(0, 8)}`;
-          console.log('Using fallback username for redirect:', redirectUsername);
-        }
-        
-        console.log('Final redirect URL:', `/edit/${redirectUsername}/${slug}`);
-        
-        // Redirect to edit page with proper user structure
-        window.location.href = `/edit/${redirectUsername}/${slug}`;
-        
-      } else {
-        // Save to localStorage for anonymous user
-        const collection = {
-          id: 'anon_' + Date.now(),
-          title: title,
-          description: description,
-          slug: slug,
-          tags: selectedTags,
-          is_anonymous: true,
-          anon_session_id: anonymousSession.getSessionId(),
-          items: [],
-          view_count: 0,
-          created_at: new Date().toISOString()
-        };
-        
-        // Save to localStorage
-        anonymousSession.saveAnonymousCollection(collection);
-        
-        console.log('Collection saved to localStorage:', collection);
-        
-        // Redirect to the edit page with anonymous structure
-        window.location.href = `/edit/anonymous/${slug}`;
+        // Redirect to edit page
+        window.location.href = `/edit/${currentUser.username}/${slug}`;
+      } catch (error) {
+        console.error('Error publishing collection:', error);
+        alert('Error publishing collection: ' + error.message);
       }
-      
-    } catch (error) {
-      console.error('Error creating collection:', error);
-      showAuthStatus(`❌ Error creating collection: ${error.message}`, 'error');
-    } finally {
-      submitBtn.textContent = originalText;
-      submitBtn.disabled = false;
     }
+  }
+  
+  // Event listeners
+  document.getElementById('add-item-btn').addEventListener('click', () => {
+    document.getElementById('add-item-btn').style.display = 'none';
+    document.getElementById('add-item-form').style.display = 'block';
   });
+  
+  document.getElementById('publish-btn').addEventListener('click', publishCollection);
+  
+  // Make functions globally accessible
+  window.nextStep = nextStep;
+  window.prevStep = prevStep;
+  window.cancelAddItem = cancelAddItem;
+  window.addItem = addItem;
+  window.deleteItem = deleteItem;
+  window.editCollectionInfo = editCollectionInfo;
+  window.publishCollection = publishCollection;
   
   // Initialize page
   initializePage();
-
-    // Make functions globally accessible
-    window.continueAnonymous = continueAnonymous;
-    
-    function continueAnonymous() {
-      // Hide the nudge and continue with anonymous collection creation
-      const authStatus = document.getElementById('auth-status');
-      authStatus.style.display = 'none';
-      
-      // Continue with the form submission for anonymous user
-      createAnonymousCollection();
-    }
-    
-    async function createAnonymousCollection() {
-      const title = document.getElementById('title').value.trim();
-      const description = document.getElementById('description').value.trim();
-      
-      if (!title) {
-        alert('Please enter a collection title');
-        return;
-      }
-      
-      const submitBtn = document.getElementById('submit-btn');
-      submitBtn.textContent = 'Creating...';
-      submitBtn.disabled = true;
-      
-      // Generate slug from title
-      const slug = title.toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)/g, '');
-      
-      // Get selected tags
-      const selectedTags = Array.from(document.querySelectorAll('input[name="tags"]:checked'))
-        .map(cb => cb.value);
-      
-      // Save to localStorage for anonymous user
-      const anonymousSession = window.anonymousSession;
-      const collection = {
-        id: `anon_${Date.now()}`,
-        title: title,
-        description: description,
-        slug: slug,
-        tags: selectedTags,
-        items: [],
-        created_at: new Date().toISOString(),
-        is_anonymous: true
-      };
-      
-      anonymousSession.saveAnonymousCollection(collection);
-      console.log('Anonymous collection saved:', collection);
-      
-      // Redirect to edit page
-      window.location.href = `/edit/anonymous/${slug}`;
-    }
 </script>
 
 <style>
@@ -504,139 +505,96 @@ import Layout from '../layouts/Layout.astro';
     margin-bottom: 32px;
   }
   
-  .tag-selection {
-    margin-bottom: 20px;
+  .collection-header {
+    background: var(--color-background-secondary);
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
   }
   
-  .tag-selection label {
+  .collection-header h2 {
+    margin: 0 0 8px 0;
+    font-size: 20px;
+    font-weight: 600;
+  }
+  
+  .add-item-section {
+    margin-bottom: 32px;
+  }
+  
+  .step-form {
+    margin-top: 16px;
+    padding: 20px;
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius);
+    background: var(--color-background-secondary);
+  }
+  
+  .step {
+    margin-bottom: 16px;
+  }
+  
+  .step label {
     display: block;
     margin-bottom: 8px;
     font-weight: 500;
     color: var(--color-text);
   }
   
-  .tag-options {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  
-  .tag-option {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
+  .step input,
+  .step textarea {
+    width: 100%;
+    padding: 12px 16px;
     border: 1.5px solid var(--color-border);
-    border-radius: 16px;
-    background: var(--color-background-secondary);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: 13px;
+    border-radius: var(--radius-sm);
+    background: var(--color-background);
+    color: var(--color-text);
+    font-size: 16px;
+    margin-bottom: 16px;
   }
   
-  .tag-option:hover {
+  .step input:focus,
+  .step textarea:focus {
+    outline: none;
     border-color: var(--color-accent);
-    background: rgb(37 99 235 / 0.05);
+    box-shadow: 0 0 0 3px rgb(37 99 235 / 0.1);
   }
   
-  .tag-option input {
-    margin: 0;
+  .step-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
   }
   
-  .tag-option input:checked + span {
+  .item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 12px;
+    background: var(--color-background-secondary);
+  }
+  
+  .item-content h3 {
+    margin: 0 0 8px 0;
+    color: var(--color-text);
+  }
+  
+  .item-content p {
+    margin: 0 0 8px 0;
+    color: var(--color-text-secondary);
+  }
+  
+  .item-content .price {
     color: var(--color-accent);
-    font-weight: 500;
+    font-weight: 600;
   }
-
-    .tag-checkbox:checked + .tag-label {
-      background-color: var(--color-primary);
-      color: white;
-      border-color: var(--color-primary);
-    }
-    
-    /* Auth Nudge Styles */
-    .auth-nudge {
-      background: var(--color-background-secondary);
-      border: 1.5px solid var(--color-border);
-      border-radius: var(--radius);
-      padding: 32px;
-      text-align: center;
-      margin-bottom: 24px;
-    }
-    
-    .nudge-icon {
-      font-size: 48px;
-      margin-bottom: 16px;
-    }
-    
-    .auth-nudge h3 {
-      margin: 0 0 12px 0;
-      color: var(--color-text);
-      font-size: 20px;
-      font-weight: 600;
-    }
-    
-    .auth-nudge p {
-      margin: 0 0 24px 0;
-      color: var(--color-text-secondary);
-      line-height: 1.5;
-    }
-    
-    .nudge-benefits {
-      display: flex;
-      justify-content: space-around;
-      margin-bottom: 24px;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-    
-    .benefit {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 14px;
-      color: var(--color-text);
-    }
-    
-    .benefit-icon {
-      font-size: 20px;
-    }
-    
-    .nudge-actions {
-      display: flex;
-      gap: 12px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-    
-    .nudge-actions .btn-primary {
-      background: var(--color-primary);
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      border-radius: var(--radius);
-      font-weight: 500;
-      cursor: pointer;
-      transition: background-color 0.2s;
-    }
-    
-    .nudge-actions .btn-primary:hover {
-      background: var(--color-primary-hover);
-    }
-    
-    .nudge-actions .btn-secondary {
-      background: transparent;
-      color: var(--color-text);
-      border: 1.5px solid var(--color-border);
-      padding: 12px 24px;
-      border-radius: var(--radius);
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    
-    .nudge-actions .btn-secondary:hover {
-      background: var(--color-background-secondary);
-      border-color: var(--color-text);
-    }
+  
+  .delete-btn {
+    padding: 8px 16px;
+    font-size: 14px;
+  }
 </style> 
