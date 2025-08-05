@@ -528,6 +528,9 @@ import Layout from '../layouts/Layout.astro';
         }
         
         // Add all items to database
+        console.log('Starting to save items to database...');
+        console.log('Number of items to save:', currentCollection.items.length);
+        
         for (const item of currentCollection.items) {
           console.log('Saving item to database:', item);
           console.log('Collection ID for item:', collection.id);
@@ -546,11 +549,13 @@ import Layout from '../layouts/Layout.astro';
           if (itemError) {
             console.error('Error saving item:', itemError);
             console.error('Item data that failed:', item);
+            console.error('Collection ID:', collection.id);
           } else {
             console.log('Item saved successfully:', itemData);
           }
         }
         
+        console.log('Finished saving all items to database');
         console.log('Published anonymous collection to database:', collection);
         window.location.href = `/anonymous/${slug}`;
         
