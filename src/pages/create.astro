@@ -494,17 +494,8 @@ import Layout from '../layouts/Layout.astro';
       return;
     }
     
-    // Generate unique slug from title with timestamp
-    const baseSlug = currentCollection.title.toLowerCase()
-      .replace(/\s+/g, '-')
-      .replace(/[^a-z0-9-]/g, '');
-    
-    // Add timestamp to make slug unique
-    const timestamp = Date.now();
-    const slug = `${baseSlug}-${timestamp}`;
-    
-    // Update collection with new slug
-    currentCollection.slug = slug;
+    // Use the slug that was already generated in goToNextStep
+    const slug = currentCollection.slug;
     
     if (!currentUser) {
       // Anonymous user - save to both localStorage and database
