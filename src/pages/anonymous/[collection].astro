@@ -90,6 +90,9 @@ const { collection } = Astro.params;
       
       console.log('Loaded collection:', collection);
       console.log('Collection items:', collection.collection_items);
+      console.log('Collection ID:', collection.id);
+      console.log('Is anonymous:', collection.is_anonymous);
+      console.log('Is public:', collection.is_public);
       
       // Update page content
       document.getElementById('collection-title').textContent = collection.title;

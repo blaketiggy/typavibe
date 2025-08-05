@@ -521,7 +521,9 @@ import Layout from '../layouts/Layout.astro';
         // Add all items to database
         for (const item of currentCollection.items) {
           console.log('Saving item to database:', item);
-          const { error: itemError } = await supabase
+          console.log('Collection ID for item:', collection.id);
+          
+          const { data: itemData, error: itemError } = await supabase
             .from('collection_items')
             .insert({
               collection_id: collection.id,
@@ -529,17 +531,19 @@ import Layout from '../layouts/Layout.astro';
               title: item.title,
               description: item.description,
               price: item.price
-            });
+            })
+            .select();
           
           if (itemError) {
             console.error('Error saving item:', itemError);
+            console.error('Item data that failed:', item);
           } else {
-            console.log('Item saved successfully');
+            console.log('Item saved successfully:', itemData);
           }
         }
         
         console.log('Published anonymous collection to database:', collection);
-        window.location.href = `/edit/anonymous/${slug}`;
+        window.location.href = `/anonymous/${slug}`;
         
       } catch (error) {
         console.error('Error publishing anonymous collection:', error);
