@@ -485,9 +485,13 @@ import Layout from '../layouts/Layout.astro';
     }
     
     // Generate slug from title
-    const slug = currentCollection.title.toLowerCase()
+    const baseSlug = currentCollection.title.toLowerCase()
       .replace(/\s+/g, '-')
       .replace(/[^a-z0-9-]/g, '');
+    
+    // Add timestamp to make slug unique
+    const timestamp = Date.now();
+    const slug = `${baseSlug}-${timestamp}`;
     
     currentCollection.slug = slug;
     
