@@ -9,7 +9,7 @@ import Layout from '../layouts/Layout.astro';
       <p class="subtitle">Create an account or sign in to save your collections</p>
       
       <!-- Google Auth Section -->
-      <div class="auth-option">
+      <div class="auth-section">
         <h3>🚀 Quick Sign In</h3>
         <p>Sign in with your Google account</p>
         <button id="google-auth-btn" class="btn-google">
@@ -23,89 +23,57 @@ import Layout from '../layouts/Layout.astro';
         </button>
       </div>
       
-      <div class="auth-divider">
+      <div class="divider">
         <span>or</span>
       </div>
       
-      <!-- Email OTP Section -->
-      <div class="auth-option">
-        <h3>📧 Email Sign In</h3>
-        <p>Get a one-time code sent to your email</p>
+      <!-- Email Auth Section -->
+      <div class="auth-section">
+        <h3>📧 Sign in with Email</h3>
         
-        <form id="otp-form">
-          <div class="form-group">
-            <input 
-              id="otp-email" 
-              type="email" 
-              placeholder="Enter your email" 
-              required 
-            />
+        <!-- OTP Flow -->
+        <div id="otp-flow" style="display: none;">
+          <div class="step" id="email-step">
+            <label>Email Address</label>
+            <input id="email-input" type="email" placeholder="Enter your email" />
+            <button onclick="sendOTP()" class="btn-primary">Send Code</button>
           </div>
           
-          <div class="form-group otp-code-group" style="display: none;">
-            <input 
-              id="otp-code" 
-              type="text" 
-              placeholder="Enter 6-digit code" 
-              maxlength="6"
-              pattern="[0-9]{6}"
-            />
-            <div class="otp-timer" id="otp-timer"></div>
+          <div class="step" id="code-step" style="display: none;">
+            <label>Enter 6-digit code</label>
+            <div class="otp-inputs">
+              <input type="text" maxlength="1" class="otp-input" data-index="0" />
+              <input type="text" maxlength="1" class="otp-input" data-index="1" />
+              <input type="text" maxlength="1" class="otp-input" data-index="2" />
+              <input type="text" maxlength="1" class="otp-input" data-index="3" />
+              <input type="text" maxlength="1" class="otp-input" data-index="4" />
+              <input type="text" maxlength="1" class="otp-input" data-index="5" />
+            </div>
+            <div class="otp-timer">
+              <span id="timer-text">Code expires in <span id="timer">60</span>s</span>
+              <button id="resend-btn" onclick="sendOTP()" style="display: none;">Resend Code</button>
+            </div>
+            <button onclick="verifyOTP()" class="btn-primary">Verify Code</button>
+            <button onclick="backToEmail()" class="btn-secondary">Back</button>
           </div>
-          
-          <button type="submit" class="btn-primary" id="otp-btn">
-            Send Code
-          </button>
-        </form>
+        </div>
         
-        <div id="otp-message" class="auth-message" style="display: none;"></div>
-      </div>
-      
-      <!-- Create Account Section -->
-      <div class="auth-option">
-        <h3>👤 Create Account</h3>
-        <p>Save your collections and access them anywhere</p>
+        <!-- Magic Link Flow -->
+        <div id="magic-link-flow">
+          <label>Email Address</label>
+          <input id="magic-email" type="email" placeholder="Enter your email" />
+          <button onclick="sendMagicLink()" class="btn-primary">Send Magic Link</button>
+          <p class="help-text">We'll send you a link to sign in instantly</p>
+        </div>
         
-        <form id="auth-form">
-          <div class="form-group">
-            <input 
-              id="username" 
-              type="text" 
-              placeholder="Choose a username" 
-              required 
-              pattern="[a-zA-Z0-9_-]{3,20}"
-              title="Username must be 3-20 characters, letters, numbers, hyphens, and underscores only"
-            />
-            <div id="username-status" class="username-status"></div>
-          </div>
-          
-          <div class="form-group">
-            <input 
-              id="email" 
-              type="email" 
-              placeholder="Enter your email" 
-              required 
-            />
-          </div>
-          
-          <button type="submit" class="btn-primary" id="submit-btn">
-            Create Account
-          </button>
-        </form>
-        
-        <div id="auth-message" class="auth-message" style="display: none;"></div>
-      </div>
-      
-      <div class="auth-divider">
-        <span>or</span>
-      </div>
-      
-      <div class="auth-option">
-        <h3>🚀 Quick Start (Anonymous)</h3>
-        <p>Create collections without signing up</p>
-        <button onclick="window.location.href='/create'" class="btn-secondary">
-          Start Creating
+        <button onclick="toggleAuthMethod()" class="btn-secondary toggle-btn">
+          <span id="toggle-text">Use OTP instead</span>
         </button>
+      </div>
+      
+      <!-- Back to Home -->
+      <div class="back-link">
+        <a href="/">← Back to Home</a>
       </div>
     </div>
   </main>
@@ -114,20 +82,13 @@ import Layout from '../layouts/Layout.astro';
 <script>
   import { supabase } from '../lib/supabase.js';
   
-  let usernameCheckTimeout;
-  let isUsernameAvailable = false;
+  let currentAuthMethod = 'magic-link'; // 'magic-link' or 'otp'
   let otpTimer = null;
-  let otpCountdown = 60;
+  let countdown = 60;
   
   // Google Auth
   document.getElementById('google-auth-btn').addEventListener('click', async () => {
-    const btn = document.getElementById('google-auth-btn');
-    const originalText = btn.innerHTML;
-    
     try {
-      btn.innerHTML = '<span>Signing in...</span>';
-      btn.disabled = true;
-      
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -136,229 +97,196 @@ import Layout from '../layouts/Layout.astro';
       });
       
       if (error) {
-        throw error;
+        console.error('Google auth error:', error);
+        alert('Error signing in with Google: ' + error.message);
       }
-      
-      // Redirect will happen automatically
-      
     } catch (error) {
       console.error('Google auth error:', error);
-      alert(`Google sign-in failed: ${error.message}`);
-      btn.innerHTML = originalText;
-      btn.disabled = false;
+      alert('Error signing in with Google: ' + error.message);
     }
   });
   
-  // OTP Email Sign In
-  document.getElementById('otp-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
+  // Toggle between OTP and Magic Link
+  function toggleAuthMethod() {
+    const otpFlow = document.getElementById('otp-flow');
+    const magicFlow = document.getElementById('magic-link-flow');
+    const toggleText = document.getElementById('toggle-text');
     
-    const email = document.getElementById('otp-email').value;
-    const code = document.getElementById('otp-code').value;
-    const messageDiv = document.getElementById('otp-message');
-    const submitBtn = document.getElementById('otp-btn');
-    const codeGroup = document.querySelector('.otp-code-group');
+    if (currentAuthMethod === 'magic-link') {
+      otpFlow.style.display = 'block';
+      magicFlow.style.display = 'none';
+      toggleText.textContent = 'Use Magic Link instead';
+      currentAuthMethod = 'otp';
+    } else {
+      otpFlow.style.display = 'none';
+      magicFlow.style.display = 'block';
+      toggleText.textContent = 'Use OTP instead';
+      currentAuthMethod = 'magic-link';
+    }
+  }
+  
+  // Magic Link
+  async function sendMagicLink() {
+    const email = document.getElementById('magic-email').value;
+    
+    if (!email) {
+      alert('Please enter your email address');
+      return;
+    }
     
     try {
-      if (!code) {
-        // Send OTP code
-        submitBtn.textContent = 'Sending...';
-        submitBtn.disabled = true;
-        
-        const { data, error } = await supabase.auth.signInWithOtp({
-          email: email,
-          options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback`
-          }
-        });
-        
-        if (error) {
-          throw error;
+      const { error } = await supabase.auth.signInWithOtp({
+        email: email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`
         }
-        
+      });
+      
+      if (error) {
+        alert('Error sending magic link: ' + error.message);
+      } else {
+        alert('Magic link sent! Check your email and click the link to sign in.');
+      }
+    } catch (error) {
+      alert('Error sending magic link: ' + error.message);
+    }
+  }
+  
+  // OTP Functions
+  async function sendOTP() {
+    const email = document.getElementById('email-input').value;
+    
+    if (!email) {
+      alert('Please enter your email address');
+      return;
+    }
+    
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: email,
+        options: {
+          shouldCreateUser: true
+        }
+      });
+      
+      if (error) {
+        alert('Error sending OTP: ' + error.message);
+      } else {
         // Show code input
-        codeGroup.style.display = 'block';
-        submitBtn.textContent = 'Verify Code';
+        document.getElementById('email-step').style.display = 'none';
+        document.getElementById('code-step').style.display = 'block';
         
         // Start timer
-        startOtpTimer();
+        startOTPTimer();
         
-        messageDiv.textContent = '✅ Code sent! Check your email.';
-        messageDiv.className = 'auth-message success';
-        messageDiv.style.display = 'block';
-        
-      } else {
-        // Verify OTP code
-        submitBtn.textContent = 'Verifying...';
-        submitBtn.disabled = true;
-        
-        const { data, error } = await supabase.auth.verifyOtp({
-          email: email,
-          token: code,
-          type: 'email'
-        });
-        
-        if (error) {
-          throw error;
-        }
-        
-        // Success - redirect to dashboard or home
-        window.location.href = '/dashboard';
+        // Focus first OTP input
+        document.querySelector('.otp-input').focus();
       }
-      
     } catch (error) {
-      console.error('OTP error:', error);
-      messageDiv.textContent = `❌ ${error.message}`;
-      messageDiv.className = 'auth-message error';
-      messageDiv.style.display = 'block';
-      
-      submitBtn.textContent = !code ? 'Send Code' : 'Verify Code';
-      submitBtn.disabled = false;
+      alert('Error sending OTP: ' + error.message);
     }
-  });
+  }
   
-  function startOtpTimer() {
-    otpCountdown = 60;
-    const timerDiv = document.getElementById('otp-timer');
+  function startOTPTimer() {
+    countdown = 60;
+    const timerElement = document.getElementById('timer');
+    const timerText = document.getElementById('timer-text');
+    const resendBtn = document.getElementById('resend-btn');
+    
+    timerText.style.display = 'inline';
+    resendBtn.style.display = 'none';
     
     otpTimer = setInterval(() => {
-      if (otpCountdown > 0) {
-        timerDiv.textContent = `Resend in ${otpCountdown}s`;
-        otpCountdown--;
-      } else {
+      countdown--;
+      timerElement.textContent = countdown;
+      
+      if (countdown <= 0) {
         clearInterval(otpTimer);
-        timerDiv.textContent = 'Code expired';
-        timerDiv.style.color = '#dc2626';
+        timerText.style.display = 'none';
+        resendBtn.style.display = 'inline';
       }
     }, 1000);
   }
   
-  // Username validation and availability check
-  document.getElementById('username').addEventListener('input', async (e) => {
-    const username = e.target.value;
-    const statusDiv = document.getElementById('username-status');
-    const submitBtn = document.getElementById('submit-btn');
+  async function verifyOTP() {
+    const otpInputs = document.querySelectorAll('.otp-input');
+    const code = Array.from(otpInputs).map(input => input.value).join('');
     
-    // Clear previous timeout
-    clearTimeout(usernameCheckTimeout);
-    
-    // Basic validation
-    if (username.length < 3) {
-      statusDiv.innerHTML = '<span style="color: #f59e0b;">⏳ Username must be at least 3 characters</span>';
-      isUsernameAvailable = false;
-      submitBtn.disabled = true;
+    if (code.length !== 6) {
+      alert('Please enter the 6-digit code');
       return;
     }
     
-    if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
-      statusDiv.innerHTML = '<span style="color: #dc2626;">❌ Username can only contain letters, numbers, hyphens, and underscores</span>';
-      isUsernameAvailable = false;
-      submitBtn.disabled = true;
-      return;
-    }
-    
-    // Show checking status
-    statusDiv.innerHTML = '<span style="color: #f59e0b;">⏳ Checking availability...</span>';
-    submitBtn.disabled = true;
-    
-    // Debounce the check
-    usernameCheckTimeout = setTimeout(async () => {
-      try {
-        // Check if username exists in profiles table
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('username')
-          .eq('username', username)
-          .single();
-        
-        if (error && error.code === 'PGRST116') {
-          // Username not found - available
-          statusDiv.innerHTML = '<span style="color: #10b981;">✅ Username available</span>';
-          isUsernameAvailable = true;
-          submitBtn.disabled = false;
-        } else if (data) {
-          // Username found - not available
-          statusDiv.innerHTML = '<span style="color: #dc2626;">❌ Username already taken</span>';
-          isUsernameAvailable = false;
-          submitBtn.disabled = true;
-        } else {
-          // Other error
-          statusDiv.innerHTML = '<span style="color: #dc2626;">❌ Error checking username</span>';
-          isUsernameAvailable = false;
-          submitBtn.disabled = true;
-        }
-      } catch (error) {
-        console.error('Username check error:', error);
-        statusDiv.innerHTML = '<span style="color: #dc2626;">❌ Error checking username</span>';
-        isUsernameAvailable = false;
-        submitBtn.disabled = true;
-      }
-    }, 500);
-  });
-  
-  // Create account form
-  document.getElementById('auth-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    if (!isUsernameAvailable) {
-      alert('Please choose an available username');
-      return;
-    }
-    
-    const username = document.getElementById('username').value;
-    const email = document.getElementById('email').value;
-    const messageDiv = document.getElementById('auth-message');
-    const submitBtn = e.target.querySelector('button[type="submit"]');
-    const originalText = submitBtn.textContent;
+    const email = document.getElementById('email-input').value;
     
     try {
-      submitBtn.textContent = 'Creating Account...';
-      submitBtn.disabled = true;
-      
-      console.log('Creating account for:', { username, email });
-      
-      // Sign up with magic link
-      const { data, error } = await supabase.auth.signInWithOtp({
+      const { data, error } = await supabase.auth.verifyOtp({
         email: email,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-          data: {
-            username: username
-          }
-        }
+        token: code,
+        type: 'email'
       });
       
-      console.log('Auth response:', { data, error });
-      
       if (error) {
-        throw error;
+        alert('Invalid code. Please try again.');
+      } else {
+        // Success - redirect to callback
+        window.location.href = '/auth/callback';
       }
-      
-      messageDiv.textContent = '✅ Magic link sent! Check your email to complete signup.';
-      messageDiv.className = 'auth-message success';
-      messageDiv.style.display = 'block';
-      
-      // Clear form
-      document.getElementById('username').value = '';
-      document.getElementById('email').value = '';
-      
     } catch (error) {
-      console.error('Auth error:', error);
-      messageDiv.textContent = `❌ ${error.message}`;
-      messageDiv.className = 'auth-message error';
-      messageDiv.style.display = 'block';
-    } finally {
-      submitBtn.textContent = originalText;
-      submitBtn.disabled = false;
+      alert('Error verifying code: ' + error.message);
     }
+  }
+  
+  function backToEmail() {
+    document.getElementById('email-step').style.display = 'block';
+    document.getElementById('code-step').style.display = 'none';
+    
+    if (otpTimer) {
+      clearInterval(otpTimer);
+    }
+  }
+  
+  // OTP Input handling
+  document.querySelectorAll('.otp-input').forEach((input, index) => {
+    input.addEventListener('input', (e) => {
+      if (e.target.value.length === 1) {
+        // Move to next input
+        const nextInput = document.querySelector(`[data-index="${index + 1}"]`);
+        if (nextInput) {
+          nextInput.focus();
+        }
+      }
+    });
+    
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && e.target.value === '') {
+        // Move to previous input
+        const prevInput = document.querySelector(`[data-index="${index - 1}"]`);
+        if (prevInput) {
+          prevInput.focus();
+        }
+      }
+    });
   });
+  
+  // Make functions globally accessible
+  window.toggleAuthMethod = toggleAuthMethod;
+  window.sendMagicLink = sendMagicLink;
+  window.sendOTP = sendOTP;
+  window.verifyOTP = verifyOTP;
+  window.backToEmail = backToEmail;
 </script>
 
 <style>
   .auth-container {
-    max-width: 480px;
+    max-width: 400px;
     margin: 0 auto;
-    padding: 24px;
+    padding: 32px 20px;
+  }
+  
+  .auth-container h1 {
+    text-align: center;
+    margin-bottom: 8px;
   }
   
   .subtitle {
@@ -367,45 +295,42 @@ import Layout from '../layouts/Layout.astro';
     margin-bottom: 32px;
   }
   
-  .auth-option {
-    background: var(--color-background-secondary);
-    border: 1.5px solid var(--color-border);
-    border-radius: var(--radius);
-    padding: 24px;
-    margin-bottom: 24px;
+  .auth-section {
+    margin-bottom: 32px;
   }
   
-  .auth-option h3 {
-    margin-bottom: 8px;
-    font-size: 1.1rem;
+  .auth-section h3 {
+    margin: 0 0 8px 0;
+    font-size: 18px;
+    font-weight: 600;
   }
   
-  .auth-option p {
+  .auth-section p {
+    margin: 0 0 16px 0;
     color: var(--color-text-secondary);
-    margin-bottom: 16px;
-    font-size: 0.9rem;
+    font-size: 14px;
   }
   
   .btn-google {
     width: 100%;
-    padding: 12px 16px;
-    border: 1.5px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    background: white;
-    color: var(--color-text);
-    font-size: 16px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 12px;
+    padding: 12px 16px;
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius);
+    background: var(--color-background);
+    color: var(--color-text);
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
   }
   
   .btn-google:hover {
+    border-color: var(--color-accent);
     background: var(--color-background-secondary);
-    border-color: var(--color-border-hover);
   }
   
   .google-icon {
@@ -413,71 +338,13 @@ import Layout from '../layouts/Layout.astro';
     height: 20px;
   }
   
-  .form-group {
-    margin-bottom: 16px;
-  }
-  
-  .form-group input {
-    width: 100%;
-    padding: 12px 16px;
-    border: 1.5px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    background: var(--color-background);
-    color: var(--color-text);
-    font-size: 16px;
-    transition: all 0.2s ease;
-  }
-  
-  .form-group input:focus {
-    outline: none;
-    border-color: var(--color-accent);
-    box-shadow: 0 0 0 3px rgb(37 99 235 / 0.1);
-  }
-  
-  .otp-code-group {
-    position: relative;
-  }
-  
-  .otp-timer {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 12px;
-    color: var(--color-text-secondary);
-  }
-  
-  .username-status {
-    margin-top: 4px;
-    font-size: 12px;
-  }
-  
-  .auth-message {
-    margin-top: 16px;
-    padding: 12px;
-    border-radius: var(--radius-sm);
-    font-size: 14px;
-  }
-  
-  .auth-message.success {
-    background: #f0fdf4;
-    color: #16a34a;
-    border: 1px solid #bbf7d0;
-  }
-  
-  .auth-message.error {
-    background: #fef2f2;
-    color: #dc2626;
-    border: 1px solid #fecaca;
-  }
-  
-  .auth-divider {
+  .divider {
     text-align: center;
     margin: 24px 0;
     position: relative;
   }
   
-  .auth-divider::before {
+  .divider::before {
     content: '';
     position: absolute;
     top: 50%;
@@ -487,10 +354,86 @@ import Layout from '../layouts/Layout.astro';
     background: var(--color-border);
   }
   
-  .auth-divider span {
+  .divider span {
     background: var(--color-background);
     padding: 0 16px;
     color: var(--color-text-secondary);
     font-size: 14px;
+  }
+  
+  .step {
+    margin-bottom: 16px;
+  }
+  
+  .step label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+  
+  .step input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-background);
+    color: var(--color-text);
+    font-size: 16px;
+    margin-bottom: 16px;
+  }
+  
+  .step input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px rgb(37 99 235 / 0.1);
+  }
+  
+  .otp-inputs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    justify-content: center;
+  }
+  
+  .otp-input {
+    width: 50px !important;
+    height: 50px;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 600;
+  }
+  
+  .otp-timer {
+    text-align: center;
+    margin-bottom: 16px;
+    font-size: 14px;
+    color: var(--color-text-secondary);
+  }
+  
+  .help-text {
+    font-size: 13px;
+    color: var(--color-text-secondary);
+    margin-top: 8px;
+  }
+  
+  .toggle-btn {
+    width: 100%;
+    margin-top: 12px;
+    font-size: 14px;
+  }
+  
+  .back-link {
+    text-align: center;
+    margin-top: 32px;
+  }
+  
+  .back-link a {
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    font-size: 14px;
+  }
+  
+  .back-link a:hover {
+    color: var(--color-text);
   }
 </style> 
