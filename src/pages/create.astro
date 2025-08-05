@@ -13,10 +13,30 @@ import Layout from '../layouts/Layout.astro';
       <!-- Collection Info (hidden initially) -->
       <div id="collection-info" style="display: none; margin-bottom: 32px;">
         <div class="collection-header">
-          <h2 id="collection-title">Untitled Collection</h2>
-          <p id="collection-description" style="color: var(--color-text-secondary);">No description</p>
+          <h2>Collection Details</h2>
+          <p style="color: var(--color-text-secondary); margin-bottom: 20px;">Add a title and description for your collection</p>
+          
+          <div class="collection-form">
+            <div class="form-group">
+              <label for="collection-title-input">Collection Title</label>
+              <input 
+                id="collection-title-input" 
+                type="text" 
+                placeholder="Enter collection title..."
+                value="Untitled Collection"
+              />
+            </div>
+            
+            <div class="form-group">
+              <label for="collection-description-input">Description (optional)</label>
+              <textarea 
+                id="collection-description-input" 
+                placeholder="Describe your collection..."
+                rows="3"
+              >No description</textarea>
+            </div>
+          </div>
         </div>
-        <button onclick="editCollectionInfo()" class="btn-secondary">Edit Title & Description</button>
       </div>
       
       <!-- Add Item Section -->
@@ -90,6 +110,9 @@ import Layout from '../layouts/Layout.astro';
       </div>
       
       <div style="margin-top: 48px; text-align: center;">
+        <button id="next-step-btn" class="btn-primary" style="display: none;">
+          Next: Review & Publish
+        </button>
         <button id="publish-btn" class="btn-primary" style="display: none;">
           🚀 Publish & Share
         </button>
@@ -291,10 +314,6 @@ import Layout from '../layouts/Layout.astro';
         created_at: new Date().toISOString(),
         is_anonymous: !currentUser
       };
-      
-      // Show collection info after first item
-      document.getElementById('collection-info').style.display = 'block';
-      document.getElementById('publish-btn').style.display = 'inline-block';
     }
     
     // Add to collection
@@ -358,6 +377,12 @@ import Layout from '../layouts/Layout.astro';
     // Reset form and reload items
     cancelAddItem();
     await loadItems();
+    
+    // Show collection details after adding first item
+    if (currentCollection.items.length === 1) {
+      document.getElementById('collection-info').style.display = 'block';
+      document.getElementById('next-step-btn').style.display = 'inline-block';
+    }
   }
   
   async function loadItems() {
@@ -418,17 +443,39 @@ import Layout from '../layouts/Layout.astro';
   }
   
   function editCollectionInfo() {
-    const title = prompt('Collection title:', currentCollection.title);
-    if (title !== null) {
-      currentCollection.title = title;
-      document.getElementById('collection-title').textContent = title;
+    // Update collection with form values
+    const titleInput = document.getElementById('collection-title-input');
+    const descriptionInput = document.getElementById('collection-description-input');
+    
+    currentCollection.title = titleInput.value || 'Untitled Collection';
+    currentCollection.description = descriptionInput.value || 'No description';
+    
+    // Save to localStorage if anonymous
+    if (!currentUser) {
+      anonymousSession.saveAnonymousCollection(currentCollection);
     }
     
-    const description = prompt('Collection description:', currentCollection.description);
-    if (description !== null) {
-      currentCollection.description = description;
-      document.getElementById('collection-description').textContent = description;
+    // Show publish button
+    document.getElementById('next-step-btn').style.display = 'none';
+    document.getElementById('publish-btn').style.display = 'inline-block';
+  }
+  
+  function goToNextStep() {
+    // Update collection with form values
+    const titleInput = document.getElementById('collection-title-input');
+    const descriptionInput = document.getElementById('collection-description-input');
+    
+    currentCollection.title = titleInput.value || 'Untitled Collection';
+    currentCollection.description = descriptionInput.value || 'No description';
+    
+    // Save to localStorage if anonymous
+    if (!currentUser) {
+      anonymousSession.saveAnonymousCollection(currentCollection);
     }
+    
+    // Show publish button
+    document.getElementById('next-step-btn').style.display = 'none';
+    document.getElementById('publish-btn').style.display = 'inline-block';
   }
   
   async function publishCollection() {
@@ -473,6 +520,7 @@ import Layout from '../layouts/Layout.astro';
         
         // Add all items to database
         for (const item of currentCollection.items) {
+          console.log('Saving item to database:', item);
           const { error: itemError } = await supabase
             .from('collection_items')
             .insert({
@@ -485,6 +533,8 @@ import Layout from '../layouts/Layout.astro';
           
           if (itemError) {
             console.error('Error saving item:', itemError);
+          } else {
+            console.log('Item saved successfully');
           }
         }
         
@@ -528,6 +578,7 @@ import Layout from '../layouts/Layout.astro';
     document.getElementById('add-item-form').style.display = 'block';
   });
   
+  document.getElementById('next-step-btn').addEventListener('click', goToNextStep);
   document.getElementById('publish-btn').addEventListener('click', publishCollection);
   
   // Make functions globally accessible
@@ -537,6 +588,7 @@ import Layout from '../layouts/Layout.astro';
   window.addItem = addItem;
   window.deleteItem = deleteItem;
   window.editCollectionInfo = editCollectionInfo;
+  window.goToNextStep = goToNextStep;
   window.publishCollection = publishCollection;
   
   // Initialize page
@@ -567,6 +619,39 @@ import Layout from '../layouts/Layout.astro';
     margin: 0 0 8px 0;
     font-size: 20px;
     font-weight: 600;
+  }
+  
+  .collection-form {
+    margin-top: 16px;
+  }
+  
+  .form-group {
+    margin-bottom: 16px;
+  }
+  
+  .form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--color-text);
+  }
+  
+  .form-group input,
+  .form-group textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-background);
+    color: var(--color-text);
+    font-size: 16px;
+  }
+  
+  .form-group input:focus,
+  .form-group textarea:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px rgb(37 99 235 / 0.1);
   }
   
   .add-item-section {

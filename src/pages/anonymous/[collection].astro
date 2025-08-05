@@ -88,6 +88,9 @@ const { collection } = Astro.params;
       
       currentCollection = collection;
       
+      console.log('Loaded collection:', collection);
+      console.log('Collection items:', collection.collection_items);
+      
       // Update page content
       document.getElementById('collection-title').textContent = collection.title;
       document.getElementById('collection-description').textContent = collection.description || 'No description';
