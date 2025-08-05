@@ -484,7 +484,7 @@ import Layout from '../layouts/Layout.astro';
       return;
     }
     
-    // Generate slug from title
+    // Generate unique slug from title with timestamp
     const baseSlug = currentCollection.title.toLowerCase()
       .replace(/\s+/g, '-')
       .replace(/[^a-z0-9-]/g, '');
@@ -493,6 +493,7 @@ import Layout from '../layouts/Layout.astro';
     const timestamp = Date.now();
     const slug = `${baseSlug}-${timestamp}`;
     
+    // Update collection with new slug
     currentCollection.slug = slug;
     
     if (!currentUser) {
