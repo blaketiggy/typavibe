@@ -478,6 +478,9 @@ import Layout from '../layouts/Layout.astro';
     const slug = `${baseSlug}-${timestamp}`;
     currentCollection.slug = slug;
     
+    console.log('Generated slug:', slug);
+    console.log('Updated collection:', currentCollection);
+    
     // Save to localStorage if anonymous
     if (!currentUser) {
       anonymousSession.saveAnonymousCollection(currentCollection);
