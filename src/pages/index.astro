@@ -168,6 +168,7 @@ import Layout from '../layouts/Layout.astro';
   }
   
   function startAnonymous() {
+    console.log('startAnonymous called');
     closeAuthModal();
     window.location.href = '/create';
   }
@@ -178,6 +179,11 @@ import Layout from '../layouts/Layout.astro';
       closeAuthModal();
     }
   });
+  
+  // Make functions globally accessible
+  window.startAnonymous = startAnonymous;
+  window.showAuthModal = showAuthModal;
+  window.closeAuthModal = closeAuthModal;
   
   // Initialize
   checkAuth();

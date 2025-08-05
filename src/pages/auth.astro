@@ -32,7 +32,7 @@ import Layout from '../layouts/Layout.astro';
         <h3>📧 Sign in with Email</h3>
         
         <!-- OTP Flow -->
-        <div id="otp-flow" style="display: none;">
+        <div id="otp-flow">
           <div class="step" id="email-step">
             <label>Email Address</label>
             <input id="email-input" type="email" placeholder="Enter your email" />
@@ -59,7 +59,7 @@ import Layout from '../layouts/Layout.astro';
         </div>
         
         <!-- Magic Link Flow -->
-        <div id="magic-link-flow">
+        <div id="magic-link-flow" style="display: none;">
           <label>Email Address</label>
           <input id="magic-email" type="email" placeholder="Enter your email" />
           <button onclick="sendMagicLink()" class="btn-primary">Send Magic Link</button>
@@ -67,7 +67,7 @@ import Layout from '../layouts/Layout.astro';
         </div>
         
         <button onclick="toggleAuthMethod()" class="btn-secondary toggle-btn">
-          <span id="toggle-text">Use OTP instead</span>
+          <span id="toggle-text">Use Magic Link instead</span>
         </button>
       </div>
       
@@ -82,7 +82,7 @@ import Layout from '../layouts/Layout.astro';
 <script>
   import { supabase } from '../lib/supabase.js';
   
-  let currentAuthMethod = 'magic-link'; // 'magic-link' or 'otp'
+  let currentAuthMethod = 'otp'; // 'magic-link' or 'otp'
   let otpTimer = null;
   let countdown = 60;
   
@@ -165,7 +165,8 @@ import Layout from '../layouts/Layout.astro';
       const { error } = await supabase.auth.signInWithOtp({
         email: email,
         options: {
-          shouldCreateUser: true
+          shouldCreateUser: true,
+          type: 'email'
         }
       });
       
