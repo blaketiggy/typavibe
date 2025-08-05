@@ -21,6 +21,7 @@ import Layout from '../layouts/Layout.astro';
   import { supabase } from '../lib/supabase.js';
   
   let username = '';
+  let currentUser = null;
   
   function initializePage() {
     // Get username from URL
@@ -36,8 +37,23 @@ import Layout from '../layouts/Layout.astro';
     document.getElementById('username-title').textContent = `@${username}'s Collections`;
     document.getElementById('username-subtitle').textContent = `All collections by ${username}`;
     
+    // Check if current user is logged in and owns these collections
+    checkCurrentUser();
+    
     // Load user collections
     loadUserCollections();
+  }
+  
+  async function checkCurrentUser() {
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (!error && user) {
+        currentUser = user;
+        console.log('Current user:', user);
+      }
+    } catch (error) {
+      console.error('Error checking current user:', error);
+    }
   }
   
   async function loadUserCollections() {
@@ -89,6 +105,9 @@ import Layout from '../layouts/Layout.astro';
         return;
       }
 
+      // Check if current user owns these collections
+      const isOwner = currentUser && profile.id === currentUser.id;
+
       grid.innerHTML = collections.map(collection => `
         <div class="collection-card">
           <div class="card-content">
@@ -106,7 +125,7 @@ import Layout from '../layouts/Layout.astro';
           </div>
           <div class="card-actions">
             <a href="/${username}/${collection.slug}" class="btn-secondary">View</a>
-            <a href="/edit/${username}/${collection.slug}" class="btn-secondary">Edit</a>
+            ${isOwner ? `<a href="/edit/${username}/${collection.slug}" class="btn-secondary">Edit</a>` : ''}
           </div>
         </div>
       `).join('');

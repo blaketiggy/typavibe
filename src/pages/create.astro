@@ -211,16 +211,31 @@ import Layout from '../layouts/Layout.astro';
       submitBtn.disabled = true;
       
       if (!currentUser) {
-        // Show gentle nudge for anonymous publishing
+        // Show enhanced nudge for anonymous publishing
         const authStatus = document.getElementById('auth-status');
         authStatus.innerHTML = `
           <div class="auth-nudge">
             <div class="nudge-icon">📝</div>
-            <h3>Publishing Anonymously</h3>
-            <p>Your collection will be saved locally and can be shared with a link. You can always sign in later to save it under your username.</p>
+            <h3>Save Your Collection</h3>
+            <p>Create an account to save your collection permanently and access it from anywhere. Or continue anonymously (saved locally only).</p>
+            <div class="nudge-benefits">
+              <div class="benefit">
+                <span class="benefit-icon">💾</span>
+                <span>Permanent storage</span>
+              </div>
+              <div class="benefit">
+                <span class="benefit-icon">🔗</span>
+                <span>Share with username</span>
+              </div>
+              <div class="benefit">
+                <span class="benefit-icon">📱</span>
+                <span>Access from anywhere</span>
+              </div>
+            </div>
             <div class="nudge-actions">
-              <button onclick="continueAnonymous()" class="btn-primary">Continue Anonymously</button>
-              <button onclick="showSignIn()" class="btn-secondary">Sign In to Save</button>
+              <a href="/auth" class="btn-primary">Create Account</a>
+              <a href="/auth" class="btn-secondary">Sign In</a>
+              <button onclick="continueAnonymous()" class="btn-secondary">Continue Anonymously</button>
             </div>
           </div>
         `;
@@ -424,7 +439,6 @@ import Layout from '../layouts/Layout.astro';
 
     // Make functions globally accessible
     window.continueAnonymous = continueAnonymous;
-    window.showSignIn = showSignIn;
     
     function continueAnonymous() {
       // Hide the nudge and continue with anonymous collection creation
@@ -433,11 +447,6 @@ import Layout from '../layouts/Layout.astro';
       
       // Continue with the form submission for anonymous user
       createAnonymousCollection();
-    }
-    
-    function showSignIn() {
-      // Redirect to auth page
-      window.location.href = '/auth';
     }
     
     async function createAnonymousCollection() {
@@ -571,6 +580,26 @@ import Layout from '../layouts/Layout.astro';
       margin: 0 0 24px 0;
       color: var(--color-text-secondary);
       line-height: 1.5;
+    }
+    
+    .nudge-benefits {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    
+    .benefit {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: var(--color-text);
+    }
+    
+    .benefit-icon {
+      font-size: 20px;
     }
     
     .nudge-actions {
