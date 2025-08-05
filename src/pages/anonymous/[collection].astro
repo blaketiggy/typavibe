@@ -1,0 +1,363 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+const { collection } = Astro.params;
+---
+
+<Layout 
+  title={`Anonymous Collection - TypaVibe`}
+  description="An anonymous collection on TypaVibe"
+  image="/og-image.png"
+  url={Astro.url.href}
+  type="website"
+>
+  <main>
+    <!-- Breadcrumbs -->
+    <nav class="breadcrumbs">
+      <a href="/" class="breadcrumb-link">Home</a>
+      <span class="breadcrumb-separator">/</span>
+      <a href="/anonymous" class="breadcrumb-link">Anonymous Collections</a>
+      <span class="breadcrumb-separator">/</span>
+      <span class="breadcrumb-current" id="breadcrumb-collection">Loading...</span>
+    </nav>
+    
+    <header>
+      <h1 id="collection-title">Loading...</h1>
+      <p id="collection-description">Loading...</p>
+      <small id="collection-views">0 views</small>
+    </header>
+    
+    <section class="items" id="collection-items">
+      <div class="loading">Loading collection...</div>
+    </section>
+    
+    <!-- Enhanced share buttons -->
+    <div class="share-buttons" id="share-buttons" style="display: none;">
+      <button class="share-btn copy-share" onclick="copyAndShare()">
+        📋 Copy & Share
+      </button>
+    </div>
+    
+    <!-- Create your own call-to-action -->
+    <div class="create-cta" id="create-cta" style="display: none;">
+      <a href="/create" class="cta-button">
+        <div class="cta-content">
+          <h3>Create Your Own TypaVibe</h3>
+          <p>Like this collection? Create your own curated list and share it with the world!</p>
+          <span class="cta-arrow">→</span>
+        </div>
+      </a>
+    </div>
+  </main>
+</Layout>
+
+<script>
+  import { supabase } from '../../lib/supabase.js';
+  
+  let currentCollection = null;
+  
+  // Load collection data
+  async function loadCollection() {
+    const collectionSlug = window.location.pathname.split('/').pop();
+    
+    console.log('Loading anonymous collection:', collectionSlug);
+    
+    try {
+      // Get collection from database
+      const { data: collection, error } = await supabase
+        .from('collections')
+        .select(`
+          *,
+          collection_items (*)
+        `)
+        .eq('slug', collectionSlug)
+        .eq('is_anonymous', true)
+        .single();
+      
+      if (error || !collection) {
+        console.error('Error loading collection:', error);
+        document.getElementById('collection-items').innerHTML = `
+          <div class="error-state">
+            <div class="error-icon">⚠️</div>
+            <h3>Collection Not Found</h3>
+            <p>This anonymous collection could not be found.</p>
+          </div>
+        `;
+        return;
+      }
+      
+      currentCollection = collection;
+      
+      // Update page content
+      document.getElementById('collection-title').textContent = collection.title;
+      document.getElementById('collection-description').textContent = collection.description || 'No description';
+      document.getElementById('breadcrumb-collection').textContent = collection.title;
+      
+      // Load items
+      loadItems(collection.collection_items || []);
+      
+      // Show share buttons
+      document.getElementById('share-buttons').style.display = 'flex';
+      document.getElementById('create-cta').style.display = 'block';
+      
+    } catch (error) {
+      console.error('Error loading collection:', error);
+      document.getElementById('collection-items').innerHTML = `
+        <div class="error-state">
+          <div class="error-icon">⚠️</div>
+          <h3>Error Loading Collection</h3>
+          <p>There was an error loading this collection.</p>
+        </div>
+      `;
+    }
+  }
+  
+  function loadItems(items) {
+    const itemsContainer = document.getElementById('collection-items');
+    
+    if (!items || items.length === 0) {
+      itemsContainer.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">📝</div>
+          <h3>No Items Yet</h3>
+          <p>This collection doesn't have any items yet.</p>
+        </div>
+      `;
+      return;
+    }
+    
+    itemsContainer.innerHTML = items.map(item => `
+      <div class="item">
+        <div class="item-content">
+          <h3 class="item-title">
+            <a href="${item.url}" target="_blank" rel="noopener noreferrer">
+              ${item.title}
+            </a>
+          </h3>
+          ${item.description ? `<p class="item-description">${item.description}</p>` : ''}
+          ${item.price ? `<span class="item-price">${item.price}</span>` : ''}
+        </div>
+        <div class="item-actions">
+          <a href="${item.url}" target="_blank" rel="noopener noreferrer" class="btn-secondary">
+            Visit →
+          </a>
+        </div>
+      </div>
+    `).join('');
+  }
+  
+  function copyAndShare() {
+    const url = window.location.href;
+    navigator.clipboard.writeText(url).then(() => {
+      alert('Link copied to clipboard! Share it with friends.');
+    }).catch(() => {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = url;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      alert('Link copied to clipboard! Share it with friends.');
+    });
+  }
+  
+  // Initialize
+  loadCollection();
+</script>
+
+<style>
+  .breadcrumbs {
+    margin-bottom: 24px;
+    font-size: 14px;
+  }
+  
+  .breadcrumb-link {
+    color: var(--color-text-secondary);
+    text-decoration: none;
+  }
+  
+  .breadcrumb-link:hover {
+    color: var(--color-text);
+  }
+  
+  .breadcrumb-separator {
+    margin: 0 8px;
+    color: var(--color-text-secondary);
+  }
+  
+  .breadcrumb-current {
+    color: var(--color-text);
+    font-weight: 500;
+  }
+  
+  header {
+    margin-bottom: 32px;
+  }
+  
+  header h1 {
+    margin: 0 0 12px 0;
+    font-size: 32px;
+    font-weight: 700;
+  }
+  
+  header p {
+    margin: 0 0 8px 0;
+    color: var(--color-text-secondary);
+    font-size: 16px;
+    line-height: 1.5;
+  }
+  
+  header small {
+    color: var(--color-text-secondary);
+    font-size: 14px;
+  }
+  
+  .items {
+    margin-bottom: 48px;
+  }
+  
+  .item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 20px;
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius);
+    margin-bottom: 16px;
+    background: var(--color-background-secondary);
+    transition: all 0.2s ease;
+  }
+  
+  .item:hover {
+    border-color: var(--color-accent);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+  
+  .item-content {
+    flex: 1;
+    margin-right: 20px;
+  }
+  
+  .item-title {
+    margin: 0 0 8px 0;
+    font-size: 18px;
+    font-weight: 600;
+  }
+  
+  .item-title a {
+    color: var(--color-text);
+    text-decoration: none;
+  }
+  
+  .item-title a:hover {
+    color: var(--color-accent);
+  }
+  
+  .item-description {
+    margin: 0 0 8px 0;
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+  }
+  
+  .item-price {
+    color: var(--color-accent);
+    font-weight: 600;
+    font-size: 14px;
+  }
+  
+  .item-actions {
+    flex-shrink: 0;
+  }
+  
+  .share-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-bottom: 48px;
+  }
+  
+  .share-btn {
+    background: var(--color-accent);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: var(--radius);
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .share-btn:hover {
+    background: var(--color-accent-hover);
+  }
+  
+  .create-cta {
+    margin-top: 48px;
+    padding: 32px;
+    background: var(--color-background-secondary);
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius);
+    text-align: center;
+  }
+  
+  .cta-button {
+    text-decoration: none;
+    color: inherit;
+  }
+  
+  .cta-content h3 {
+    margin: 0 0 8px 0;
+    font-size: 20px;
+    font-weight: 600;
+  }
+  
+  .cta-content p {
+    margin: 0 0 16px 0;
+    color: var(--color-text-secondary);
+  }
+  
+  .cta-arrow {
+    font-size: 18px;
+    color: var(--color-accent);
+  }
+  
+  .loading, .empty-state, .error-state {
+    text-align: center;
+    padding: 48px 24px;
+  }
+  
+  .empty-icon, .error-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+  }
+  
+  .empty-state h3, .error-state h3 {
+    margin: 0 0 8px 0;
+    font-size: 20px;
+    font-weight: 600;
+  }
+  
+  .empty-state p, .error-state p {
+    margin: 0;
+    color: var(--color-text-secondary);
+  }
+  
+  .btn-secondary {
+    background: transparent;
+    color: var(--color-text);
+    border: 1.5px solid var(--color-border);
+    padding: 8px 16px;
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+  
+  .btn-secondary:hover {
+    background: var(--color-background);
+    border-color: var(--color-text);
+  }
+</style> 

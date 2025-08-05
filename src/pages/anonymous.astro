@@ -18,24 +18,41 @@ import Layout from '../layouts/Layout.astro';
 </Layout>
 
 <script>
+  import { supabase } from '../lib/supabase.js';
   import { anonymousSession } from '../lib/anonymous.js';
   
   // Make anonymousSession globally accessible
   window.anonymousSession = anonymousSession;
   
-  function loadAnonymousCollections() {
+  async function loadAnonymousCollections() {
     const grid = document.getElementById('collections-grid');
     
     try {
-      // Get all anonymous collections from localStorage
-      const collections = anonymousSession.getAnonymousCollections();
+      // Get anonymous collections from database
+      const { data: collections, error } = await supabase
+        .from('collections')
+        .select(`
+          *,
+          collection_items (*)
+        `)
+        .eq('is_anonymous', true)
+        .eq('is_public', true)
+        .order('created_at', { ascending: false })
+        .limit(100);
       
-      // Sort by creation date (newest first) and limit to 100
-      const sortedCollections = collections
-        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-        .slice(0, 100);
+      if (error) {
+        console.error('Error loading anonymous collections:', error);
+        grid.innerHTML = `
+          <div class="error-state">
+            <div class="error-icon">⚠️</div>
+            <h3>Error Loading Collections</h3>
+            <p>There was an error loading the collections. Please try again.</p>
+          </div>
+        `;
+        return;
+      }
       
-      if (sortedCollections.length === 0) {
+      if (!collections || collections.length === 0) {
         grid.innerHTML = `
           <div class="empty-state">
             <div class="empty-icon">📝</div>
@@ -47,19 +64,14 @@ import Layout from '../layouts/Layout.astro';
         return;
       }
       
-      grid.innerHTML = sortedCollections.map(collection => `
+      grid.innerHTML = collections.map(collection => `
         <div class="collection-card">
           <div class="card-content">
             <h3 class="collection-title">${collection.title}</h3>
             ${collection.description ? `<p class="collection-description">${collection.description}</p>` : ''}
             <div class="collection-meta">
               <span class="collection-date">${new Date(collection.created_at).toLocaleDateString()}</span>
-              ${collection.tags && collection.tags.length > 0 ? 
-                `<div class="collection-tags">
-                  ${collection.tags.slice(0, 3).map(tag => `<span class="tag">${tag}</span>`).join('')}
-                  ${collection.tags.length > 3 ? `<span class="tag-more">+${collection.tags.length - 3}</span>` : ''}
-                </div>` : ''
-              }
+              <span class="item-count">${collection.collection_items?.length || 0} items</span>
             </div>
           </div>
           <div class="card-actions">

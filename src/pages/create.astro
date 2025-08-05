@@ -300,12 +300,13 @@ import Layout from '../layouts/Layout.astro';
     // Add to collection
     currentCollection.items.push(newItem);
     
-    // Save to storage
+    // Save based on user type
     if (!currentUser) {
+      // Anonymous user - save to localStorage only
       anonymousSession.saveAnonymousCollection(currentCollection);
-      console.log('Saved to localStorage');
+      console.log('Saved anonymous collection to localStorage:', currentCollection);
     } else {
-      // Save to database
+      // Authenticated user - save to database
       try {
         if (!currentCollection.db_id) {
           // Create collection in database
@@ -390,11 +391,13 @@ import Layout from '../layouts/Layout.astro';
       currentCollection.items.splice(itemId, 1);
       
       if (!currentUser) {
+        // Anonymous user - update localStorage only
         anonymousSession.updateCollection(currentCollection.slug, {
           items: currentCollection.items
         });
+        console.log('Updated anonymous collection in localStorage');
       } else {
-        // Delete from database
+        // Authenticated user - delete from database
         try {
           const { error } = await supabase
             .from('collection_items')
@@ -442,11 +445,58 @@ import Layout from '../layouts/Layout.astro';
     currentCollection.slug = slug;
     
     if (!currentUser) {
-      // Save anonymous collection
-      anonymousSession.saveAnonymousCollection(currentCollection);
-      window.location.href = `/edit/anonymous/${slug}`;
+      // Anonymous user - save to both localStorage and database
+      try {
+        // First save to localStorage for editing
+        anonymousSession.saveAnonymousCollection(currentCollection);
+        console.log('Saved anonymous collection to localStorage:', currentCollection);
+        
+        // Then save to database for public viewing
+        const { data: collection, error } = await supabase
+          .from('collections')
+          .insert({
+            title: currentCollection.title,
+            description: currentCollection.description,
+            slug: slug,
+            is_public: true,
+            is_anonymous: true,
+            created_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+        
+        if (error) {
+          console.error('Error publishing anonymous collection:', error);
+          alert('Error publishing collection: ' + error.message);
+          return;
+        }
+        
+        // Add all items to database
+        for (const item of currentCollection.items) {
+          const { error: itemError } = await supabase
+            .from('collection_items')
+            .insert({
+              collection_id: collection.id,
+              url: item.url,
+              title: item.title,
+              description: item.description,
+              price: item.price
+            });
+          
+          if (itemError) {
+            console.error('Error saving item:', itemError);
+          }
+        }
+        
+        console.log('Published anonymous collection to database:', collection);
+        window.location.href = `/edit/anonymous/${slug}`;
+        
+      } catch (error) {
+        console.error('Error publishing anonymous collection:', error);
+        alert('Error publishing collection: ' + error.message);
+      }
     } else {
-      // Update collection in database
+      // Authenticated user - update database and redirect
       try {
         const { error } = await supabase
           .from('collections')
